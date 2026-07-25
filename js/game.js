@@ -531,7 +531,34 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   updateTotalStats();
+  bootstrapQuestionBankIfEmpty();
 });
+
+// يحمّل بنك الأسئلة الافتراضي من data/questions.json و data/questions-part2.json
+// فقط إذا كان البنك المحلي (localStorage/السحابة) فارغاً بعد، حتى لا يطغى على بيانات حقيقية
+async function bootstrapQuestionBankIfEmpty() {
+  if (Object.keys(QBANK).length > 0) return;
+
+  try {
+    const [r1, r2] = await Promise.all([
+      fetch('data/questions.json'),
+      fetch('data/questions-part2.json'),
+    ]);
+    const [d1, d2] = await Promise.all([r1.json(), r2.json()]);
+
+    if (Object.keys(QBANK).length > 0) return; // تجنّب سباق مع سحب بيانات حقيقية من السحابة
+
+    QBANK = { ...d1, ...d2 };
+    saveJSON('mr_bank', QBANK);
+    updateTotalStats();
+
+    if (document.querySelector('#screen-categories.active')) {
+      renderCatGrid();
+    }
+  } catch (error) {
+    console.warn('تعذّر تحميل بنك الأسئلة الافتراضي:', error);
+  }
+}
 
 function updateTotalStats() {
   let total = 0;

@@ -82,7 +82,7 @@ async function pullFromCloudOnce() {
       .eq('id', 'categories')
       .single();
 
-    if (!catError && catData?.data) {
+    if (!catError && Array.isArray(catData?.data) && catData.data.length > 0) {
       CATEGORIES = catData.data;
       saveJSON('mr_categories', CATEGORIES);
     }
@@ -94,7 +94,7 @@ async function pullFromCloudOnce() {
       .eq('id', 'points')
       .single();
 
-    if (!pointsError && pointsData?.data) {
+    if (!pointsError && Array.isArray(pointsData?.data) && pointsData.data.length > 0) {
       POINTS = pointsData.data;
       saveJSON('mr_points', POINTS);
     }
@@ -106,7 +106,7 @@ async function pullFromCloudOnce() {
       .eq('id', 'question_bank')
       .single();
 
-    if (!bankError && bankData?.data) {
+    if (!bankError && bankData?.data && Object.keys(bankData.data).length > 0) {
       QBANK = bankData.data;
       saveJSON('mr_bank', QBANK);
     }
@@ -136,25 +136,31 @@ function listenToCloudChanges() {
 
           switch (id) {
             case 'categories':
-              CATEGORIES = data;
-              saveJSON('mr_categories', CATEGORIES);
-              if (document.querySelector('#screen-categories.active')) {
-                renderCatGrid();
+              if (Array.isArray(data) && data.length > 0) {
+                CATEGORIES = data;
+                saveJSON('mr_categories', CATEGORIES);
+                if (document.querySelector('#screen-categories.active')) {
+                  renderCatGrid();
+                }
               }
               break;
 
             case 'points':
-              POINTS = data;
-              saveJSON('mr_points', POINTS);
-              if (document.querySelector('#screen-game.active')) {
-                renderBoard();
+              if (Array.isArray(data) && data.length > 0) {
+                POINTS = data;
+                saveJSON('mr_points', POINTS);
+                if (document.querySelector('#screen-game.active')) {
+                  renderBoard();
+                }
               }
               break;
 
             case 'question_bank':
-              QBANK = data;
-              saveJSON('mr_bank', QBANK);
-              updateTotalStats();
+              if (data && Object.keys(data).length > 0) {
+                QBANK = data;
+                saveJSON('mr_bank', QBANK);
+                updateTotalStats();
+              }
               break;
           }
 
