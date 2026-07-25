@@ -1,0 +1,1848 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مخمخ رجا</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800;900&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --night:#0A1A14;
+    --night-2:#0F2A20;
+    --panel:#12382A;
+    --panel-2:#173F2F;
+    --gold:#D4AF37;
+    --gold-soft:#C9A24B;
+    --sand:#EFE3C6;
+    --clay:#B85C38;
+    --teamA:#3FA796;
+    --teamB:#C9A24B;
+    --used:#0C2218;
+    --text:#EFE3C6;
+    --muted:#9FB8AB;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;min-height:100%;}
+  body{
+    background:
+      radial-gradient(1200px 700px at 50% -10%, #173F2F 0%, var(--night) 55%, #060F0B 100%);
+    color:var(--text);
+    font-family:'Tajawal', sans-serif;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  .sadu{
+    height:14px; width:100%;
+    background:
+      repeating-linear-gradient(135deg, var(--gold) 0 7px, transparent 7px 14px),
+      repeating-linear-gradient(45deg, var(--gold) 0 7px, transparent 7px 14px);
+    background-blend-mode:screen; opacity:.85;
+    mask-image: linear-gradient(90deg, transparent, black 5%, black 95%, transparent);
+  }
+  .sadu-strip{
+    height:10px;
+    background-image: repeating-linear-gradient(45deg, var(--gold) 0, var(--gold) 5px, transparent 5px, transparent 10px),
+                       repeating-linear-gradient(-45deg, var(--clay) 0, var(--clay) 5px, transparent 5px, transparent 10px);
+    background-size: 20px 20px, 20px 20px; opacity:.5;
+  }
+  header{ text-align:center; padding:26px 16px 8px; position:relative; }
+  .admin-gear{
+    position:absolute; top:20px; left:20px; background:rgba(0,0,0,.25);
+    border:1px solid rgba(212,175,55,.35); color:var(--gold); font-size:18px;
+    border-radius:10px; padding:8px 11px; cursor:pointer;
+  }
+  .admin-gear:hover{ background:rgba(212,175,55,.15); }
+  .brand{
+    font-family:'Cairo', sans-serif; font-weight:900;
+    font-size:clamp(30px, 6vw, 52px); letter-spacing:1px; color:var(--gold);
+    text-shadow: 0 0 18px rgba(212,175,55,.35), 0 2px 0 rgba(0,0,0,.4); margin:0;
+  }
+  .brand span{ color:var(--sand); }
+  .tag{ color:var(--muted); font-size:14px; margin-top:6px; }
+
+  .screen{ display:none; max-width:1180px; margin:0 auto; padding:20px 16px 60px; }
+  .screen.active{ display:block; }
+
+  .step-title{
+    font-family:'Cairo'; font-weight:800; font-size:clamp(20px,3vw,28px);
+    text-align:center; color:var(--sand); margin:18px 0 6px;
+  }
+  .step-sub{ text-align:center; color:var(--muted); font-size:13px; margin-bottom:22px; }
+
+  /* setup */
+  .setup-row{
+    display:flex; gap:18px; justify-content:center; flex-wrap:wrap; margin-bottom:26px;
+  }
+  .team-setup{
+    background:linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:1px solid rgba(212,175,55,.3); border-radius:16px;
+    padding:20px; width:340px; max-width:92vw;
+  }
+  .team-setup.A{ border-color:rgba(63,167,150,.5); }
+  .team-setup.B{ border-color:rgba(201,162,75,.5); }
+  .team-setup label{ font-family:'Cairo'; font-weight:800; font-size:13px; color:var(--muted); display:block; margin-bottom:6px; }
+  .team-setup input[type=text]{
+    width:100%; background:rgba(0,0,0,.25); border:1px solid rgba(239,227,198,.25);
+    border-radius:10px; padding:10px 12px; color:var(--text); font-family:'Cairo'; font-weight:700;
+    font-size:15px; margin-bottom:16px;
+  }
+  .lifelines-label{ font-family:'Cairo'; font-weight:800; font-size:13px; color:var(--muted); margin-bottom:8px; }
+  .lifelines{ display:flex; gap:8px; flex-wrap:wrap; }
+  .lifeline-chip{
+    flex:1; min-width:58px; text-align:center; padding:10px 4px; border-radius:10px;
+    border:1px solid rgba(239,227,198,.25); background:rgba(0,0,0,.2); cursor:pointer;
+    font-size:11px; color:var(--muted);
+  }
+  .lifeline-chip .ic{ font-size:20px; display:block; margin-bottom:3px; }
+  .lifeline-chip.sel{ border-color:var(--gold); background:rgba(212,175,55,.15); color:var(--sand); }
+  .lifeline-count{ font-size:11px; color:var(--muted); margin-top:8px; text-align:center; }
+
+  /* category grid */
+  .cat-toolbar{ display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+  .custom-cat-input{
+    background:rgba(0,0,0,.25); border:1px solid rgba(239,227,198,.3); border-radius:999px;
+    padding:8px 16px; color:var(--text); font-family:'Tajawal'; font-size:13px; width:220px;
+  }
+  .add-cat-btn{
+    background:var(--gold); color:#1A1306; border:none; border-radius:999px; padding:8px 16px;
+    font-family:'Cairo'; font-weight:800; cursor:pointer; font-size:13px;
+  }
+  .cat-grid{
+    display:grid; grid-template-columns:repeat(7, 1fr); gap:12px; margin-bottom:20px;
+  }
+  @media (max-width:900px){ .cat-grid{ grid-template-columns:repeat(4, 1fr); } }
+  @media (max-width:560px){ .cat-grid{ grid-template-columns:repeat(3, 1fr); } }
+  .cat-pick{
+    background:linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:2px solid rgba(212,175,55,.18); border-radius:12px; cursor:pointer;
+    text-align:center; padding:14px 4px 10px; transition:border-color .15s, transform .15s;
+    position:relative;
+  }
+  .cat-pick:hover{ transform:translateY(-2px); }
+  .cat-pick.sel{ border-color:var(--gold); background:linear-gradient(180deg, #1c4a35, #143527); }
+  .cat-pick .ic{ font-size:30px; display:block; margin-bottom:6px; }
+  .cat-pick .nm{ font-family:'Cairo'; font-weight:800; font-size:12px; color:var(--sand); line-height:1.3; }
+  .cat-pick .check{
+    position:absolute; top:6px; left:6px; width:18px; height:18px; border-radius:50%;
+    background:var(--gold); color:#1A1306; font-size:11px; display:none; align-items:center; justify-content:center;
+  }
+  .cat-pick.sel .check{ display:flex; }
+
+  .selection-status{ text-align:center; font-family:'Cairo'; font-weight:700; color:var(--muted); font-size:13px; margin-bottom:18px; }
+  .selection-status b{ color:var(--gold); }
+
+  .nav-buttons{ display:flex; justify-content:center; gap:14px; margin-top:18px; }
+  .btn-main{
+    font-family:'Cairo'; font-weight:800; border-radius:12px; padding:13px 30px; border:none;
+    cursor:pointer; font-size:15px;
+  }
+  .btn-primary{ background:var(--gold); color:#1A1306; }
+  .btn-primary:disabled{ opacity:.4; cursor:not-allowed; }
+  .btn-ghost{ background:transparent; border:1px solid rgba(239,227,198,.35); color:var(--sand); }
+
+  /* scoreboard (game screen) */
+  .scoreboard{ display:flex; justify-content:center; gap:18px; margin:10px auto 6px; flex-wrap:wrap; }
+  .team-card{
+    background:linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:1px solid rgba(212,175,55,.35); border-radius:14px; padding:12px 20px;
+    min-width:210px; text-align:center; box-shadow:0 6px 22px rgba(0,0,0,.35);
+  }
+  .team-card.A{ border-color: rgba(63,167,150,.55); }
+  .team-card.B{ border-color: rgba(201,162,75,.55); }
+  .team-name{ font-family:'Cairo', sans-serif; font-weight:800; font-size:15px; }
+  .team-score{ font-family:'Cairo'; font-weight:900; font-size:32px; margin-top:2px; }
+  .team-card.A .team-score{ color:var(--teamA); }
+  .team-card.B .team-score{ color:var(--teamB); }
+  .team-lifelines{ display:flex; gap:6px; justify-content:center; margin-top:8px; }
+  .team-lifelines .ic{
+    font-size:16px; background:rgba(0,0,0,.2); border-radius:8px; padding:4px 6px; cursor:pointer;
+    border:1px solid rgba(239,227,198,.2);
+  }
+  .team-lifelines .ic.used{ opacity:.25; text-decoration:line-through; cursor:default; }
+
+  .reset-btn{
+    display:block; margin:10px auto 0; background:none; border:1px solid rgba(239,227,198,.3);
+    color:var(--muted); border-radius:20px; padding:5px 16px; font-family:'Tajawal'; font-size:12px; cursor:pointer;
+  }
+  .reset-btn:hover{ color:var(--sand); border-color:var(--gold); }
+
+  .round-tabs{ display:flex; justify-content:center; gap:10px; margin:16px 0 6px; flex-wrap:wrap; }
+  .round-tab{
+    font-family:'Cairo'; font-weight:700; background:var(--panel); border:1px solid rgba(212,175,55,.25);
+    color:var(--muted); padding:8px 20px; border-radius:999px; cursor:pointer; font-size:14px;
+  }
+  .round-tab.active{ background:var(--gold); color:#1A1306; border-color:var(--gold); }
+
+  .board-wrap{ max-width:1180px; margin:14px auto 60px; padding:0 16px; }
+  .board{ display:grid; gap:10px; }
+  .cat-header{
+    font-family:'Cairo'; font-weight:800; font-size:clamp(11px,1.4vw,14px);
+    background:linear-gradient(180deg, var(--panel-2), var(--panel)); border:1px solid rgba(212,175,55,.3);
+    border-radius:10px 10px 4px 4px; text-align:center; padding:12px 4px; min-height:58px;
+    display:flex; align-items:center; justify-content:center; gap:4px; flex-direction:column; color:var(--sand); line-height:1.25;
+  }
+  .cat-header .ic{ font-size:18px; }
+  .cell{
+    background:linear-gradient(180deg, #0E2B20, #0A2118); border:1px solid rgba(212,175,55,.18);
+    border-radius:8px; font-family:'Cairo'; font-weight:900; font-size:clamp(16px,2.2vw,24px);
+    color:var(--gold-soft); text-align:center; padding:16px 4px; cursor:pointer;
+    transition:transform .15s ease, box-shadow .15s ease, background .2s;
+  }
+  .cell:hover{ transform:translateY(-3px); box-shadow:0 8px 18px rgba(212,175,55,.18); background:linear-gradient(180deg, #123726, #0D2B1F); }
+  .cell.used{ background:var(--used); color:#2C4A3D; cursor:default; box-shadow:none; transform:none; }
+  .cell.used:hover{ transform:none; box-shadow:none; }
+
+  .overlay{
+    position:fixed; inset:0; background:rgba(4,10,7,.92); backdrop-filter:blur(3px);
+    display:none; align-items:center; justify-content:center; z-index:50; padding:20px;
+  }
+  .overlay.show{ display:flex; }
+  .qcard{
+    width:min(900px, 96vw); background:linear-gradient(180deg, var(--panel-2), var(--night-2));
+    border:1px solid rgba(212,175,55,.4); border-radius:20px; padding:30px 30px 18px; position:relative;
+    box-shadow:0 30px 80px rgba(0,0,0,.6); max-height:92vh; overflow:auto;
+  }
+  .qcard .topline{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  .qcat{ font-family:'Cairo'; font-weight:800; color:var(--gold); font-size:15px; }
+  .qpoints{
+    font-family:'Cairo'; font-weight:900; color:var(--sand); background:rgba(212,175,55,.15);
+    border:1px solid rgba(212,175,55,.4); padding:4px 14px; border-radius:999px; font-size:15px;
+  }
+  .qimg{
+    width:100%; display:flex; align-items:center; justify-content:center; font-size:64px;
+    background:rgba(0,0,0,.25); border-radius:14px; margin:10px 0 18px; min-height:100px;
+  }
+  .qtext{
+    font-family:'Cairo'; font-weight:700; font-size:clamp(18px,2.5vw,25px); text-align:center;
+    color:var(--sand); line-height:1.6; padding:6px 4px 18px; min-height:30px;
+  }
+  .qtext.hide{ display:none; }
+  .atext{
+    display:none; font-family:'Cairo'; font-weight:800; font-size:clamp(17px,2.3vw,23px); text-align:center;
+    color:var(--teamA); background:rgba(63,167,150,.1); border:1px dashed rgba(63,167,150,.5);
+    border-radius:12px; padding:16px; margin:0 0 18px;
+  }
+  .atext.show{ display:block; }
+  .loadbox{ text-align:center; color:var(--muted); font-family:'Cairo'; font-weight:700; padding:30px 0; }
+  .errbox{ text-align:center; color:var(--clay); font-family:'Cairo'; font-weight:700; padding:14px 0; }
+
+  .corners{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; border-top:1px solid rgba(212,175,55,.2); padding-top:16px; }
+  .corner{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .btn{ font-family:'Cairo'; font-weight:800; border-radius:10px; padding:10px 16px; border:1px solid transparent; cursor:pointer; font-size:14px; }
+  .btn-answer{ background:var(--gold); color:#1A1306; }
+  .btn-answer:hover{ filter:brightness(1.08); }
+  .btn-award{ background:transparent; border:1px solid var(--teamA); color:var(--teamA); }
+  .btn-award.B{ border-color:var(--teamB); color:var(--teamB); }
+  .btn-award:hover{ background:rgba(255,255,255,.06); }
+  .btn-skip{ background:transparent; border:1px solid rgba(239,227,198,.3); color:var(--muted); }
+  .btn-close{ position:absolute; top:14px; left:14px; background:none; border:none; color:var(--muted); font-size:20px; cursor:pointer; }
+  .btn-close:hover{ color:var(--sand); }
+  .corner-label{ font-size:11px; color:var(--muted); width:100%; margin-bottom:-2px; }
+
+  footer{ text-align:center; color:var(--muted); font-size:12px; padding-bottom:30px; }
+
+  /* ADMIN PANEL */
+  .admin-section{
+    background:linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:1px solid rgba(212,175,55,.25); border-radius:14px; padding:18px; margin-bottom:20px;
+  }
+  .admin-section h3{ font-family:'Cairo'; font-weight:800; color:var(--gold); font-size:16px; margin:0 0 12px; }
+  .admin-row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+  .admin-row input[type=text], .admin-row input[type=number], .admin-row select, .admin-row textarea{
+    background:rgba(0,0,0,.25); border:1px solid rgba(239,227,198,.25); border-radius:8px;
+    padding:8px 10px; color:var(--text); font-family:'Tajawal'; font-size:13px;
+  }
+  .admin-row textarea{ width:100%; min-height:56px; resize:vertical; font-family:'Tajawal'; }
+  .points-inputs{ display:flex; gap:10px; align-items:center; }
+  .points-inputs input{ width:80px; }
+  .points-inputs label{ font-family:'Cairo'; font-weight:700; font-size:12px; color:var(--muted); }
+  .cat-admin-list{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:6px; }
+  .cat-admin-chip{
+    display:flex; align-items:center; gap:6px; background:rgba(0,0,0,.2);
+    border:1px solid rgba(212,175,55,.2); border-radius:999px; padding:6px 10px; font-size:12px;
+  }
+  .cat-admin-chip .del{ cursor:pointer; color:var(--clay); font-weight:900; }
+  .bank-controls{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+  .bank-list{ max-height:280px; overflow:auto; border-top:1px solid rgba(212,175,55,.15); margin-top:10px; }
+  .bank-item{
+    display:flex; justify-content:space-between; gap:10px; align-items:flex-start;
+    padding:10px 4px; border-bottom:1px solid rgba(239,227,198,.08); font-size:13px;
+  }
+  .bank-item .bq{ color:var(--sand); font-weight:700; font-family:'Cairo'; }
+  .bank-item .ba{ color:var(--teamA); font-size:12px; margin-top:2px; }
+  .bank-item .del-q{ background:none; border:none; color:var(--clay); font-size:16px; cursor:pointer; flex-shrink:0; }
+  .bank-count{ font-size:12px; color:var(--muted); margin-top:4px; }
+  .admin-hint{ font-size:12px; color:var(--muted); line-height:1.6; }
+</style>
+</head>
+<body>
+
+<div class="sadu"></div>
+<header>
+  <button class="admin-gear" id="adminGearBtn" onclick="openAdmin()" title="لوحة الإدارة">⚙️</button>
+  <span id="syncStatus" style="position:absolute; top:24px; right:20px; font-size:11px; color:var(--muted); background:rgba(0,0,0,.25); border:1px solid rgba(212,175,55,.25); border-radius:999px; padding:5px 12px;">📴 وضع محلي</span>
+  <h1 class="brand">مخمخ <span>رجا</span></h1>
+  <div class="tag">لعبة أسئلة وأجوبة جماعية بأسئلة تتجدد بالذكاء الاصطناعي</div>
+</header>
+<div class="sadu-strip"></div>
+
+<!-- SCREEN 1: SETUP -->
+<div class="screen active" id="screen-setup">
+  <div class="step-title">حدد معلومات الفرق</div>
+  <div class="step-sub">اكتب اسم كل فريق واختر 3 وسائل مساعدة لكل فريق</div>
+  <div class="setup-row">
+    <div class="team-setup A">
+      <label>🟢 اسم الفريق الأول</label>
+      <input type="text" id="setupNameA" placeholder="الفريق الأول" value="الفريق الأول">
+      <div class="lifelines-label">وسائل المساعدة (اختر 3)</div>
+      <div class="lifelines" id="lifelinesA"></div>
+      <div class="lifeline-count" id="countA">0 / 3</div>
+    </div>
+    <div class="team-setup B">
+      <label>🟡 اسم الفريق الثاني</label>
+      <input type="text" id="setupNameB" placeholder="الفريق الثاني" value="الفريق الثاني">
+      <div class="lifelines-label">وسائل المساعدة (اختر 3)</div>
+      <div class="lifelines" id="lifelinesB"></div>
+      <div class="lifeline-count" id="countB">0 / 3</div>
+    </div>
+  </div>
+  <div class="nav-buttons">
+    <button class="btn-main btn-primary" onclick="goToCategories()">التالي: اختيار الفئات ←</button>
+  </div>
+</div>
+
+<!-- SCREEN 2: CATEGORIES -->
+<div class="screen" id="screen-categories">
+  <div class="step-title">اختر فئات الجولة</div>
+  <div class="step-sub">كل 6 فئات تكوّن جولة. اختر أي عدد، وراح تنقسم تلقائياً إلى جولات</div>
+  <div class="cat-toolbar">
+    <input type="text" class="custom-cat-input" id="customCatName" placeholder="اسم فئة مخصصة...">
+    <button class="add-cat-btn" onclick="addCustomCategory()">+ إضافة فئة</button>
+  </div>
+  <div class="cat-grid" id="catGrid"></div>
+  <div class="selection-status" id="selStatus"></div>
+  <div class="nav-buttons">
+    <button class="btn-main btn-ghost" onclick="goToSetup()">→ رجوع</button>
+    <button class="btn-main btn-primary" id="startBtn" onclick="startGame()" disabled>ابدأ اللعبة 🎮</button>
+  </div>
+</div>
+
+<!-- SCREEN: ADMIN -->
+<div class="screen" id="screen-admin">
+  <div class="step-title">⚙️ لوحة الإدارة</div>
+  <div class="step-sub">تحكم بالفئات، النقاط، وبنك الأسئلة — كل تعديل يُحفظ تلقائياً في هذا المتصفح</div>
+
+  <div class="admin-section">
+    <h3>نقاط الأسئلة (سهل / متوسط / صعب)</h3>
+    <div class="points-inputs">
+      <label>سهل</label><input type="number" id="ptEasy" value="100">
+      <label>متوسط</label><input type="number" id="ptMed" value="250">
+      <label>صعب</label><input type="number" id="ptHard" value="400">
+      <button class="btn-main btn-primary" style="padding:8px 18px;font-size:13px;" onclick="savePoints()">حفظ النقاط</button>
+    </div>
+  </div>
+
+  <div class="admin-section">
+    <h3>الفئات المتاحة (<span id="catCountLabel">0</span>)</h3>
+    <div class="admin-row">
+      <input type="text" id="adminNewCatName" placeholder="اسم فئة جديدة">
+      <button class="btn-main btn-primary" style="padding:8px 18px;font-size:13px;" onclick="adminAddCategory()">+ إضافة</button>
+      <button class="btn-main btn-ghost" style="padding:8px 18px;font-size:13px;" onclick="resetCategoriesToDefault()">إرجاع الفئات الافتراضية</button>
+    </div>
+    <div class="cat-admin-list" id="catAdminList"></div>
+  </div>
+
+  <div class="admin-section">
+    <h3>بنك الأسئلة</h3>
+    <div class="admin-hint">بنك الأسئلة هو المصدر الأساسي للأسئلة (يشتغل بدون إنترنت). إذا فتحت خانة ما فيها سؤال محفوظ، بتقدر تكتبه مباشرة أثناء اللعب وبيُحفظ تلقائياً. تقدر أيضاً تجهّز ملف JSON فيه آلاف الأسئلة وتستورده دفعة وحدة من هنا. لو فعّلت المزامنة السحابية (راجع أول ملف الكود)، أي تعديل هنا ينعكس تلقائياً على باقي الأجهزة.</div>
+    <div class="admin-hint" style="margin-top:6px;">إجمالي الأسئلة الحالية بالبنك: <b id="totalBankCount" style="color:var(--gold);">0</b></div>
+    <div class="bank-controls">
+      <select id="bankCatSelect"></select>
+      <select id="bankDiffSelect">
+        <option value="easy">سهل (100)</option>
+        <option value="medium">متوسط (250)</option>
+        <option value="hard">صعب (400)</option>
+      </select>
+      <button class="btn-main btn-ghost" style="padding:8px 18px;font-size:13px;" onclick="exportBank()">تصدير JSON</button>
+      <label class="btn-main btn-ghost" style="padding:8px 18px;font-size:13px;cursor:pointer;">
+        استيراد JSON
+        <input type="file" accept=".json" id="importFile" style="display:none" onchange="importBank(event)">
+      </label>
+    </div>
+    <div class="admin-row" style="flex-direction:column; align-items:stretch;">
+      <input type="text" id="newQText" placeholder="نص السؤال">
+      <input type="text" id="newQAnswer" placeholder="الإجابة الصحيحة">
+      <div class="admin-row">
+        <input type="text" id="newQEmoji" placeholder="إيموجي (اختياري)" style="width:110px;">
+        <input type="text" id="newQImgQuery" placeholder="كلمة بحث صورة (اختياري)" style="width:200px;">
+        <input type="text" id="newQAudio" placeholder="نص يُنطق صوتياً (اختياري)" style="width:200px;">
+      </div>
+      <div class="admin-row">
+        <label class="btn-main btn-ghost" style="padding:8px 18px;font-size:13px;cursor:pointer;">
+          📷 رفع صورة من الجهاز
+          <input type="file" accept="image/*" id="newQImageFile" style="display:none" onchange="handleImageUpload(event)">
+        </label>
+        <img id="newQImagePreview" style="display:none; height:44px; border-radius:8px; border:1px solid rgba(212,175,55,.4);">
+        <span id="newQImageName" style="font-size:12px; color:var(--muted);"></span>
+        <button class="btn-main btn-ghost" id="clearImageBtn" style="display:none; padding:6px 12px; font-size:12px;" onclick="clearImageUpload()">✕ إزالة الصورة</button>
+        <button class="btn-main btn-primary" style="padding:8px 18px;font-size:13px;margin-right:auto;" onclick="addBankQuestion()">+ إضافة سؤال للبنك</button>
+      </div>
+    </div>
+    <div class="bank-count" id="bankCount"></div>
+    <div class="bank-list" id="bankList"></div>
+  </div>
+
+  <div class="nav-buttons">
+    <button class="btn-main btn-ghost" onclick="closeAdmin()">→ رجوع للعبة</button>
+  </div>
+</div>
+
+<!-- SCREEN 3: GAME -->
+<div class="screen" id="screen-game">
+  <div class="scoreboard">
+    <div class="team-card A">
+      <div class="team-name" id="gameNameA">الفريق الأول</div>
+      <div class="team-score" id="scoreA">0</div>
+      <div class="team-lifelines" id="lifeDisplayA"></div>
+    </div>
+    <div class="team-card B">
+      <div class="team-name" id="gameNameB">الفريق الثاني</div>
+      <div class="team-score" id="scoreB">0</div>
+      <div class="team-lifelines" id="lifeDisplayB"></div>
+    </div>
+  </div>
+  <button class="reset-btn" onclick="backToSetupConfirm()">↺ لعبة جديدة</button>
+
+  <div class="round-tabs" id="roundTabs"></div>
+  <div class="board-wrap"><div class="board" id="board"></div></div>
+</div>
+
+<footer>الأسئلة تُسحب من بنك الأسئلة المحفوظ في هذا المتصفح — أضف/عدّل/احذف أي سؤال من لوحة الإدارة ⚙️</footer>
+
+<div class="overlay" id="overlay">
+  <div class="qcard">
+    <button class="btn-close" onclick="closeQuestion()">✕</button>
+    <div class="topline">
+      <div class="qcat" id="qcat"></div>
+      <div class="qpoints" id="qpoints"></div>
+    </div>
+    <div id="qbody">
+      <div class="qimg" id="qimg"></div>
+      <div class="qtext" id="qtext"></div>
+      <div class="atext" id="atext"></div>
+    </div>
+
+    <div class="corners" id="cornersBar">
+      <div class="corner" id="answerCorner">
+        <span class="corner-label">الإجابة</span><br>
+        <button class="btn btn-answer" id="toggleAnswerBtn" onclick="toggleAnswer()">عرض الإجابة</button>
+      </div>
+      <div class="corner" id="awardCorner">
+        <span class="corner-label">إعطاء النقاط</span><br>
+        <button class="btn btn-award A" id="btnAwardA" onclick="award('A')">للفريق الأول</button>
+        <button class="btn btn-award B" id="btnAwardB" onclick="award('B')">للفريق الثاني</button>
+        <button class="btn btn-skip" onclick="award(null)">بدون نقاط</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================ SOUND ============================ */
+const Sound = (function(){
+  let ctx = null;
+  function getCtx(){
+    if(!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if(ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+  function tone(freq, start, dur, type, gainVal){
+    const c = getCtx();
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, c.currentTime + start);
+    gain.gain.setValueAtTime(0, c.currentTime + start);
+    gain.gain.linearRampToValueAtTime(gainVal || 0.15, c.currentTime + start + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + start + dur);
+    osc.connect(gain); gain.connect(c.destination);
+    osc.start(c.currentTime + start);
+    osc.stop(c.currentTime + start + dur + 0.02);
+  }
+  return {
+    click(){ try{ tone(520, 0, .08, 'triangle', .12); }catch(e){} },
+    open(){ try{ tone(420,0,.09,'sine',.1); tone(620,0.07,.12,'sine',.1); }catch(e){} },
+    reveal(){ try{ tone(740,0,.1,'sine',.12); tone(990,0.08,.16,'sine',.12); }catch(e){} },
+    award(){ try{ tone(523,0,.12,'triangle',.14); tone(659,0.1,.12,'triangle',.14); tone(784,0.2,.22,'triangle',.16); }catch(e){} },
+    skip(){ try{ tone(300,0,.12,'sine',.1); tone(220,0.1,.18,'sine',.1); }catch(e){} },
+    start(){ try{ tone(392,0,.1,'triangle',.12); tone(494,0.1,.1,'triangle',.12); tone(587,0.2,.1,'triangle',.12); tone(784,0.3,.25,'triangle',.16); }catch(e){} },
+    select(){ try{ tone(440,0,.06,'square',.06); }catch(e){} },
+  };
+})();
+
+/* ============================ CLOUD SYNC (اختياري) ============================
+لتفعيل مزامنة الفئات/النقاط/بنك الأسئلة بين أكثر من جهاز تلقائياً — نستخدم Supabase
+(بديل مفتوح المصدر، مو تابع لقوقل، مبني على PostgreSQL، وله باقة مجانية سخية):
+
+1) روح https://supabase.com واعمل حساب مجاني (بريد إلكتروني عادي أو GitHub، بدون بطاقة ائتمان)
+2) اضغط "New Project" وسمّه أي اسم، واختر باسورد لقاعدة البيانات (احفظه بمكان، ما راح تحتاجه بالكود لكن يفيدك لاحقاً)
+3) بعد ما يجهز المشروع (دقيقة تقريباً)، روح تبويب "SQL Editor" من القائمة الجانبية واكتب هذا الأمر وشغّله (زر Run):
+
+   create table game_data (
+     id text primary key,
+     data jsonb,
+     updated_at timestamptz default now()
+   );
+   alter table game_data enable row level security;
+   create policy "public access" on game_data for all using (true) with check (true);
+   insert into game_data (id, data) values ('shared', '{}'::jsonb);
+
+4) روح تبويب "Database" > "Replication" وفعّل (Enable) خيار الـ Realtime لجدول game_data
+   (هذا اللي يخلي التحديثات تنعكس فوراً على الأجهزة الثانية بدون تحديث الصفحة يدوياً)
+5) روح ⚙️ Project Settings > API، وانسخ من هناك القيمتين:
+   - Project URL
+   - anon public key
+   وحطهم تحت بدل القيم الفارغة:
+*/
+const supabaseUrl = "";
+const supabaseAnonKey = "";
+const CLOUD_SYNC_ENABLED = !!supabaseUrl && !!supabaseAnonKey; // يتفعّل تلقائياً بمجرد ما تحط القيم فوق
+
+let supa = null;
+if(CLOUD_SYNC_ENABLED && typeof supabase !== 'undefined'){
+  try{ supa = supabase.createClient(supabaseUrl, supabaseAnonKey); }
+  catch(e){ console.error('supabase init failed', e); }
+}
+
+function setSyncStatus(status){
+  const el = document.getElementById('syncStatus');
+  if(!el) return;
+  if(status==='synced'){ el.textContent='☁️ متزامن'; el.style.color='var(--teamA)'; }
+  else if(status==='syncing'){ el.textContent='🔄 جاري المزامنة...'; el.style.color='var(--muted)'; }
+  else if(status==='error'){ el.textContent='⚠️ خطأ بالمزامنة'; el.style.color='var(--clay)'; }
+  else { el.textContent='📴 وضع محلي'; el.style.color='var(--muted)'; }
+}
+
+async function pushToCloud(){
+  if(!CLOUD_SYNC_ENABLED || !supa) return;
+  setSyncStatus('syncing');
+  try{
+    const payload = { categories: CATEGORIES, points: POINTS, bank: QBANK, bankVersion: BANK_VERSION };
+    const { error } = await supa.from('game_data').upsert({ id:'shared', data: payload, updated_at: new Date().toISOString() });
+    if(error) throw error;
+    setSyncStatus('synced');
+  } catch(e){ console.error('cloud push failed', e); setSyncStatus('error'); }
+}
+
+function applyCloudData(data){
+  if(!data) return;
+  if(data.categories && data.categories.length){ CATEGORIES = data.categories; saveJSON('mr_categories', CATEGORIES); }
+  if(data.points && data.points.length){ POINTS = data.points; saveJSON('mr_points', POINTS); }
+  if(data.bank && Object.keys(data.bank).length){ QBANK = normalizeBank(data.bank); saveJSON('mr_bank', QBANK); }
+  refreshUIAfterSync();
+  setSyncStatus('synced');
+}
+
+function refreshUIAfterSync(){
+  const active = document.querySelector('.screen.active');
+  if(!active) return;
+  if(active.id==='screen-categories') renderCatGrid();
+  if(active.id==='screen-admin'){
+    renderAdminCategories(); populateBankCatSelect(); renderBankList();
+    document.getElementById('ptEasy').value=POINTS[0];
+    document.getElementById('ptMed').value=POINTS[1];
+    document.getElementById('ptHard').value=POINTS[2];
+  }
+  if(active.id==='screen-game') renderBoard();
+}
+
+async function pullFromCloudOnce(){
+  if(!CLOUD_SYNC_ENABLED || !supa) return;
+  setSyncStatus('syncing');
+  try{
+    const { data: row, error } = await supa.from('game_data').select('data').eq('id','shared').single();
+    if(error) throw error;
+    if(row && row.data && Object.keys(row.data).length){ applyCloudData(row.data); }
+    else { pushToCloud(); } // cloud row is empty, seed it with our current local data
+  } catch(e){ console.error('cloud pull failed', e); setSyncStatus('error'); }
+}
+
+function listenToCloud(){
+  if(!CLOUD_SYNC_ENABLED || !supa) return;
+  supa.channel('game_data_changes')
+    .on('postgres_changes', { event:'*', schema:'public', table:'game_data', filter:'id=eq.shared' },
+      payload=>{ if(payload.new && payload.new.data) applyCloudData(payload.new.data); })
+    .subscribe();
+}
+
+/* ============================ DATA ============================ */
+const LIFELINES = [
+  {key:'fakh', name:'الفخ', ic:'🪤'},
+  {key:'istareeh', name:'استريح', ic:'✋'},
+  {key:'hofra', name:'الحفرة', ic:'🕳️'},
+  {key:'sadeeq', name:'اتصال بصديق', ic:'📞'},
+  {key:'jawabain', name:'جاوب جوابين', ic:'✌️'},
+];
+
+const DEFAULT_CATEGORIES = [
+  {name:'الشمال', ic:'🧭'}, {name:'الحرمين', ic:'🕋'}, {name:'الوسطى', ic:'🏙️'},
+  {name:'الجنوب', ic:'⛰️'}, {name:'الغربية', ic:'🏘️'}, {name:'الشرقية', ic:'🛢️'},
+  {name:'السعودية', ic:'🇸🇦'}, {name:'أغاني وطنية', ic:'🎤'}, {name:'حلا وقهوة', ic:'☕'},
+  {name:'موسم الرياض', ic:'🎡'}, {name:'لهجات سعودية', ic:'🗣️'}, {name:'سوبرماركت', ic:'🛒'},
+  {name:'مطاعم السعودية', ic:'🍽️'}, {name:'شعارات سعودية', ic:'🏷️'}, {name:'عالم الحيوان', ic:'🐘'},
+  {name:'تكنولوجيا', ic:'💻'}, {name:'معلومات عامة', ic:'❓'}, {name:'سيرة ذاتية', ic:'👤'},
+  {name:'تاريخ', ic:'🏛️'}, {name:'عالم الشعر', ic:'✍️'}, {name:'لغة وأدب', ic:'📖'},
+  {name:'طب عام', ic:'🩺'}, {name:'عطور عربية', ic:'🪔'}, {name:'عطور عالمية', ic:'🧴'},
+  {name:'أكل وبراد', ic:'🧺'}, {name:'منتجات', ic:'🛍️'}, {name:'شعارات عالمية', ic:'🌐'},
+  {name:'شعارات', ic:'🎯'}, {name:'ميمز', ic:'😂'}, {name:'الذكاء الاصطناعي', ic:'🤖'},
+  {name:'سيارات', ic:'🚗'}, {name:'منو المشهور', ic:'🎩'}, {name:'مين المؤثر', ic:'🕵️'},
+  {name:'صوت المشهور', ic:'🎙️'}, {name:'طب الأسنان', ic:'🦷'},
+];
+let CATEGORIES = loadJSON('mr_categories', DEFAULT_CATEGORIES.slice());
+
+/* ============================ PERSISTENCE ============================ */
+function loadJSON(key, fallback){
+  try{
+    const raw = localStorage.getItem(key);
+    if(!raw) return fallback;
+    return JSON.parse(raw);
+  } catch(e){ return fallback; }
+}
+function saveJSON(key, val){
+  try{ localStorage.setItem(key, JSON.stringify(val)); } catch(e){ console.error('save failed', e); }
+}
+
+/* ============================ STATE ============================ */
+let teamSetup = { A:{name:'الفريق الأول', lifelines:[]}, B:{name:'الفريق الثاني', lifelines:[]} };
+let selectedCats = []; // array of {name, ic}
+let rounds = [];       // array of arrays of 6 (or fewer) categories
+let stateUsed = {};    // roundIdx -> [catIdx][row] bool
+let questionCache = {}; // "r-c-row" -> {question, answer, emoji}
+let askedByCategory = {}; // category name -> [question strings]
+let scores = {A:0,B:0};
+let lifelineUsed = {A:[], B:[]};
+let activeRound = 0;
+let current = null;
+
+// question bank: { "categoryName": { easy:[{question,answer,emoji,needsImage,imageQuery,needsAudio,audioText}], medium:[...], hard:[...] } }
+const DEFAULT_BANK = {
+  "السعودية": {
+    easy:[
+      {question:"ما هي عاصمة المملكة العربية السعودية؟", answer:"الرياض", emoji:"🏙️"},
+      {question:"ما هو لون العلم السعودي؟", answer:"أخضر", emoji:"🏳️"}
+    ],
+    medium:[
+      {question:"كم عدد المناطق الإدارية في المملكة العربية السعودية؟", answer:"13 منطقة", emoji:"🗺️"},
+      {question:"ما اسم العملة الرسمية للمملكة العربية السعودية؟", answer:"الريال السعودي", emoji:"💰"}
+    ],
+    hard:[
+      {question:"في أي عام أُعلن توحيد المملكة العربية السعودية باسمها الحالي؟", answer:"عام 1932م", emoji:"📜"},
+      {question:"ما اسم الرؤية التنموية التي أطلقتها المملكة عام 2016م لتنويع الاقتصاد؟", answer:"رؤية السعودية 2030", emoji:"🎯"}
+    ]
+  },
+  "تاريخ": {
+    easy:[
+      {question:"من هو الملك المؤسس للمملكة العربية السعودية؟", answer:"الملك عبدالعزيز آل سعود", emoji:"👑"},
+      {question:"ما اسم الدرع الذي يظهر عادة في الشعارات الرسمية السعودية مع النخلة والسيفين؟", answer:"شعار الدولة", emoji:"🛡️"}
+    ],
+    medium:[
+      {question:"ما اسم المدينة التي استرجعها الملك عبدالعزيز عام 1902م وكانت بداية التوحيد؟", answer:"الرياض", emoji:"🏰", needsImage:true, imageQuery:"Masmak Fortress Riyadh"},
+      {question:"ما اسم الدولة السعودية الأولى ومتى تأسست تقريباً؟", answer:"الدولة السعودية الأولى، تأسست عام 1727م", emoji:"🏛️"}
+    ],
+    hard:[
+      {question:"ما اسم المناسبة التي تخلّد ذكرى تأسيس الدولة السعودية الأولى عام 1727م؟", answer:"يوم التأسيس", emoji:"📅"},
+      {question:"من هو الإمام الذي أسس الدولة السعودية الأولى في الدرعية؟", answer:"الإمام محمد بن سعود", emoji:"🕌"}
+    ]
+  },
+  "الحرمين": {
+    easy:[
+      {question:"في أي مدينتين سعوديتين يقع الحرمان الشريفان؟", answer:"مكة المكرمة والمدينة المنورة", emoji:"🕋"},
+      {question:"ما اسم اللقب الذي يحمله خادم الحرمين الشريفين؟", answer:"لقب ملك المملكة العربية السعودية", emoji:"👑"}
+    ],
+    medium:[
+      {question:"ما اسم المسجد الذي يضم الكعبة المشرفة؟", answer:"المسجد الحرام", emoji:"🕌"},
+      {question:"ما اسم المسجد الذي يضم قبر النبي محمد ﷺ؟", answer:"المسجد النبوي", emoji:"🕌"}
+    ],
+    hard:[
+      {question:"ما اسم الجبل الذي يوجد فيه غار حراء؟", answer:"جبل النور", emoji:"⛰️"},
+      {question:"ما اسم البئر التاريخية المعروفة في المدينة المنورة والمرتبطة بأحداث إسلامية مبكرة؟", answer:"بئر رومة", emoji:"💧"}
+    ]
+  },
+  "الشمال": {
+    easy:[
+      {question:"ما هي عاصمة منطقة الجوف الواقعة أقصى شمال السعودية؟", answer:"سكاكا", emoji:"🧭"},
+      {question:"ما اسم أكبر مدينة في منطقة الحدود الشمالية؟", answer:"عرعر", emoji:"🏜️"}
+    ],
+    medium:[
+      {question:"بأي محصول زراعي تشتهر منطقة الجوف بشكل خاص؟", answer:"الزيتون", emoji:"🫒"},
+      {question:"ما اسم منطقة شمال المملكة التي تشتهر بمدينة تبوك؟", answer:"منطقة تبوك", emoji:"🗺️"}
+    ],
+    hard:[
+      {question:"ما اسم المدينة التاريخية القديمة في منطقة الجوف المعروفة بواحتها الكبيرة؟", answer:"دومة الجندل", emoji:"🏜️"},
+      {question:"ما اسم الميناء السعودي الواقع على ساحل خليج العقبة شمال غرب المملكة؟", answer:"ميناء ضباء", emoji:"⚓"}
+    ]
+  },
+  "الجنوب": {
+    easy:[
+      {question:"ما هي عاصمة منطقة عسير؟", answer:"أبها", emoji:"⛰️"},
+      {question:"ما اسم منطقة جنوب المملكة التي تشتهر بمدينة جازان الساحلية؟", answer:"منطقة جازان", emoji:"🌊"}
+    ],
+    medium:[
+      {question:"ما اسم السلسلة الجبلية الشهيرة في عسير المعروفة بضبابها وأجوائها الباردة؟", answer:"جبال السودة", emoji:"🌫️"},
+      {question:"بأي فاكهة استوائية تشتهر منطقة جازان بشكل خاص؟", answer:"المانجو", emoji:"🥭"}
+    ],
+    hard:[
+      {question:"ما اسم أعلى قمة جبلية في المملكة العربية السعودية؟", answer:"جبل السودة", emoji:"🏔️"},
+      {question:"ما اسم القرية التراثية المعروفة في عسير ببيوتها الملونة (القصب)؟", answer:"قرية رجال ألمع", emoji:"🎨"}
+    ]
+  },
+  "الغربية": {
+    easy:[
+      {question:"ما هي أكبر مدينة في المنطقة الغربية وتُلقّب بعروس البحر الأحمر؟", answer:"جدة", emoji:"🌊"},
+      {question:"ما اسم المحافظة الواقعة شمال غرب المملكة والمشهورة بمواقعها الأثرية والطبيعية الحديثة؟", answer:"محافظة العلا", emoji:"🏜️"}
+    ],
+    medium:[
+      {question:"ما اسم الموقع الأثري في محافظة العلا المسجّل ضمن مواقع اليونسكو؟", answer:"مدائن صالح (الحِجر)", emoji:"🏛️", needsImage:true, imageQuery:"Hegra Mada'in Saleh AlUla"},
+      {question:"ما اسم كورنيش جدة الشهير المطل على البحر الأحمر؟", answer:"كورنيش جدة", emoji:"🌅"}
+    ],
+    hard:[
+      {question:"ما اسم المسجد الذي يُعتبر أول مسجد بُني في الإسلام ويقع قرب المدينة المنورة؟", answer:"مسجد قباء", emoji:"🕌"},
+      {question:"ما اسم أكبر نافورة مائية في العالم وتقع على ساحل جدة؟", answer:"نافورة الملك فهد", emoji:"⛲"}
+    ]
+  },
+  "الشرقية": {
+    easy:[
+      {question:"ما هي عاصمة المنطقة الشرقية؟", answer:"الدمام", emoji:"🛢️"},
+      {question:"ما اسم الجسر الذي يربط المملكة العربية السعودية بمملكة البحرين؟", answer:"جسر الملك فهد", emoji:"🌉"}
+    ],
+    medium:[
+      {question:"ما اسم أكبر واحة نخيل في العالم وتقع في المنطقة الشرقية؟", answer:"واحة الأحساء", emoji:"🌴"},
+      {question:"ما اسم المدينة الشرقية المشهورة بصناعة اللؤلؤ قديماً؟", answer:"القطيف", emoji:"🦪"}
+    ],
+    hard:[
+      {question:"ما اسم أول بئر نفط تجاري اكتُشف في السعودية عام 1938م؟", answer:"بئر الدمام رقم 7", emoji:"⛽"},
+      {question:"ما اسم شركة النفط الوطنية السعودية العملاقة ومقرها في الظهران؟", answer:"أرامكو السعودية", emoji:"🏭"}
+    ]
+  },
+  "الوسطى": {
+    easy:[
+      {question:"ما اسم القصر التاريخي الشهير في وسط الرياض؟", answer:"قصر المصمك", emoji:"🏰", needsImage:true, imageQuery:"Masmak Fortress"},
+      {question:"ما اسم أطول برج في مدينة الرياض ويُشبه قارورة عطر؟", answer:"برج المملكة", emoji:"🗼"}
+    ],
+    medium:[
+      {question:"ما اسم الحي التاريخي القديم في وسط الرياض؟", answer:"حي الديرة", emoji:"🏘️"},
+      {question:"ما اسم منطقة وسط المملكة التي تشتهر بمدينة القصيم وزراعة النخيل؟", answer:"منطقة القصيم", emoji:"🌴"}
+    ],
+    hard:[
+      {question:"ما اسم أول جامعة تأسست في المملكة العربية السعودية؟", answer:"جامعة الملك سعود", emoji:"🎓"},
+      {question:"ما اسم مركز المعارض والمؤتمرات الكبير الواقع شمال الرياض؟", answer:"واجهة الرياض / مركز الملك عبدالعزيز الدولي للمؤتمرات", emoji:"🏢"}
+    ]
+  },
+  "حلا وقهوة": {
+    easy:[
+      {question:"ما هو المشروب التقليدي الذي يُقدَّم مع التمر في الضيافة السعودية؟", answer:"القهوة العربية", emoji:"☕"},
+      {question:"بأي لون تُعرف القهوة العربية عادة، خلافاً للقهوة الغربية الداكنة؟", answer:"لون فاتح (ذهبي)", emoji:"🟡"}
+    ],
+    medium:[
+      {question:"ما اسم الحلى السعودي المصنوع من التمر ويُقدَّم عادة مع القهوة في المناسبات؟", answer:"الكليجا", emoji:"🍪"},
+      {question:"ما اسم الإبريق التقليدي الذي تُقدَّم فيه القهوة العربية؟", answer:"الدلة", emoji:"🫖"}
+    ],
+    hard:[
+      {question:"ما اسم البهار الذي يُضاف عادة للقهوة العربية لإعطائها نكهتها المميزة؟", answer:"الهيل (الحبهان)", emoji:"🌿"},
+      {question:"بأي يد يُفضَّل تقديم فنجان القهوة حسب العادات السعودية؟", answer:"اليد اليمنى", emoji:"🤲"}
+    ]
+  },
+  "لهجات سعودية": {
+    easy:[
+      {question:"ما معنى كلمة (وايد) في اللهجة الخليجية؟", answer:"كثير", emoji:"🗣️"},
+      {question:"ما معنى كلمة (زين) في اللهجة السعودية؟", answer:"جيد / حسن", emoji:"👍"}
+    ],
+    medium:[
+      {question:"ماذا تعني عبارة (شلونك) في اللهجة السعودية؟", answer:"كيف حالك", emoji:"💬"},
+      {question:"ماذا تعني كلمة (خوش) عند استخدامها قبل صفة، مثل (خوش رجّال)؟", answer:"جيد / ممتاز", emoji:"✨"}
+    ],
+    hard:[
+      {question:"ماذا يقصد المتحدث عادة بعبارة (يا حليلك)؟", answer:"تعبير عن التعاطف أو الإعجاب", emoji:"🕊️"},
+      {question:"ماذا تعني كلمة (أبشر) عند الرد على طلب شخص؟", answer:"موافقة فورية بمعنى تم / حاضر", emoji:"✅"}
+    ]
+  },
+  "عالم الحيوان": {
+    easy:[
+      {question:"ما هو أسرع حيوان بري في العالم؟", answer:"الفهد الصياد", emoji:"🐆", needsImage:true, imageQuery:"cheetah running"},
+      {question:"ما اسم أكبر حيوان بري في العالم؟", answer:"الفيل الأفريقي", emoji:"🐘"}
+    ],
+    medium:[
+      {question:"ما اسم أكبر الثدييات في العالم؟", answer:"الحوت الأزرق", emoji:"🐋"},
+      {question:"ما هو الحيوان المعروف بأنه سفينة الصحراء؟", answer:"الجمل", emoji:"🐫"}
+    ],
+    hard:[
+      {question:"كم عدد قلوب الأخطبوط؟", answer:"ثلاثة قلوب", emoji:"🐙"},
+      {question:"ما هو الطائر الوحيد القادر على الطيران للخلف؟", answer:"الطائر الطنّان (الهمّينغبيرد)", emoji:"🐦"}
+    ]
+  },
+  "معلومات عامة": {
+    easy:[
+      {question:"كم عدد أيام السنة الميلادية الكبيسة؟", answer:"366 يوماً", emoji:"📅"},
+      {question:"كم عدد قارات العالم؟", answer:"سبع قارات", emoji:"🌍"}
+    ],
+    medium:[
+      {question:"ما هو أطول نهر في العالم؟", answer:"نهر النيل", emoji:"🌊"},
+      {question:"ما هي أكبر دولة في العالم من حيث المساحة؟", answer:"روسيا", emoji:"🗺️"}
+    ],
+    hard:[
+      {question:"ما هو العنصر الكيميائي الأكثر وفرة في الكون؟", answer:"الهيدروجين", emoji:"⚛️"},
+      {question:"ما اسم أصغر كوكب في المجموعة الشمسية؟", answer:"عطارد", emoji:"🪐"}
+    ]
+  },
+  "تكنولوجيا": {
+    easy:[
+      {question:"ما اسم الشركة التي تصنّع هواتف آيفون؟", answer:"آبل (Apple)", emoji:"📱"},
+      {question:"ما اسم أشهر محرك بحث في العالم؟", answer:"جوجل (Google)", emoji:"🔍"}
+    ],
+    medium:[
+      {question:"ما المعنى المختصر لكلمة (AI) الشائعة في التقنية؟", answer:"الذكاء الاصطناعي", emoji:"🤖"},
+      {question:"ما اسم نظام التشغيل مفتوح المصدر المستخدم في أغلب الهواتف الذكية حول العالم؟", answer:"أندرويد (Android)", emoji:"📲"}
+    ],
+    hard:[
+      {question:"ما اسم أول شركة وصلت قيمتها السوقية إلى تريليون دولار؟", answer:"آبل (Apple)", emoji:"💻"},
+      {question:"ما اسم بروتوكول نقل النص الفائق المستخدم في تصفح الإنترنت؟", answer:"HTTP", emoji:"🌐"}
+    ]
+  },
+  "لغة وأدب": {
+    easy:[
+      {question:"من مؤلف كتاب (ألف ليلة وليلة)؟", answer:"عمل جماعي شعبي مجهول المؤلف", emoji:"📖"},
+      {question:"كم عدد حروف اللغة العربية؟", answer:"28 حرفاً", emoji:"🔤"}
+    ],
+    medium:[
+      {question:"ما هو أطول بحر شعري في الشعر العربي؟", answer:"بحر الطويل", emoji:"✍️"},
+      {question:"من مؤلف رواية (مدن الملح)؟", answer:"عبدالرحمن منيف", emoji:"📚"}
+    ],
+    hard:[
+      {question:"من يُلقّب بـ(شاعر الحمراء) في الأدب العربي؟", answer:"ابن زيدون", emoji:"🖋️"},
+      {question:"ما اسم أول معجم عربي مرتّب حسب مخارج الحروف؟", answer:"معجم العين للخليل بن أحمد الفراهيدي", emoji:"📕"}
+    ]
+  },
+  "طب عام": {
+    easy:[
+      {question:"ما هو العضو المسؤول عن ضخ الدم في جسم الإنسان؟", answer:"القلب", emoji:"❤️"},
+      {question:"كم عدد عظام جسم الإنسان البالغ تقريباً؟", answer:"206 عظمة", emoji:"🦴"}
+    ],
+    medium:[
+      {question:"ما هو أكبر عضو في جسم الإنسان؟", answer:"الجلد", emoji:"🩺"},
+      {question:"ما اسم العضو المسؤول عن تنقية الدم من السموم في الجسم؟", answer:"الكبد", emoji:"🫀"}
+    ],
+    hard:[
+      {question:"ما اسم الهرمون المسؤول عن تنظيم مستوى السكر في الدم؟", answer:"الإنسولين", emoji:"💉"},
+      {question:"ما اسم فصيلة الدم التي تُعرف بالمعطي العام؟", answer:"فصيلة O سالب", emoji:"🩸"}
+    ]
+  },
+  "عطور عربية": {
+    easy:[
+      {question:"ما اسم العطر التقليدي المستخرج من خشب معيّن وتشتهر به المنطقة العربية؟", answer:"العود", emoji:"🪔"},
+      {question:"ما اسم الأداة التقليدية التي يُبخَّر بها المنزل والضيوف بالعود؟", answer:"المبخرة", emoji:"🔥"}
+    ],
+    medium:[
+      {question:"ما اسم المادة العطرية التي تُستخرج من إفرازات غدة حوت العنبر وتُستخدم في العطور الفاخرة؟", answer:"العنبر", emoji:"🧴"},
+      {question:"ما اسم الزيت العطري الثمين المستخرج من نبات الورد الطائفي؟", answer:"دهن الورد الطائفي", emoji:"🌹"}
+    ],
+    hard:[
+      {question:"ما اسم المدينة السعودية التاريخية المشهورة بتجارة البخور والعطور قديماً؟", answer:"جدة", emoji:"🏺"},
+      {question:"ما اسم أشهر مدينة سعودية تشتهر بزراعة الورد الطائفي؟", answer:"الطائف", emoji:"🌷"}
+    ]
+  },
+  "سيارات": {
+    easy:[
+      {question:"ما اسم الشركة اليابانية المصنّعة لسيارة (لاندكروزر)؟", answer:"تويوتا", emoji:"🚗"},
+      {question:"ما اسم شركة السيارات الألمانية التي شعارها نجمة داخل دائرة؟", answer:"مرسيدس بنز", emoji:"⭐"}
+    ],
+    medium:[
+      {question:"ما اسم أول شركة صنعت سيارة تعمل بالكهرباء بالكامل بشكل تجاري واسع؟", answer:"تسلا (Tesla)", emoji:"⚡"},
+      {question:"ما اسم شركة السيارات الإيطالية الفاخرة التي شعارها حصان أسود مقفز؟", answer:"فيراري (Ferrari)", emoji:"🐎"}
+    ],
+    hard:[
+      {question:"ما اسم الرمز الذي يُطلق على السيارات الفارهة الألمانية ذات الحلقات الأربع؟", answer:"أودي (Audi)", emoji:"🏁"},
+      {question:"ما اسم مخترع أول سيارة تعمل بمحرك احتراق داخلي عملي؟", answer:"كارل بنز", emoji:"🔧"}
+    ]
+  },
+  "أغاني وطنية": {
+    easy:[
+      {question:"ما هي المناسبة التي تُعزف فيها عادةً الأغاني والأناشيد الوطنية بكثرة في السعودية؟", answer:"اليوم الوطني", emoji:"🎤"},
+      {question:"ما هو اللون الذي يُعد رمزاً للاحتفالات الوطنية السعودية؟", answer:"الأخضر", emoji:"💚"}
+    ],
+    medium:[
+      {question:"ما اسم النشيد الرسمي الذي يُعزف في المناسبات الوطنية والحكومية السعودية؟", answer:"النشيد الوطني السعودي", emoji:"🎼"},
+      {question:"ما اسم المناسبة الوطنية التي تُحيي ذكرى تأسيس الدولة السعودية الأولى عام 1727م؟", answer:"يوم التأسيس", emoji:"📅"}
+    ],
+    hard:[
+      {question:"بأي شهر ميلادي يُحتفل باليوم الوطني السعودي؟", answer:"سبتمبر (23 سبتمبر)", emoji:"📅"},
+      {question:"بأي شهر ميلادي يُحتفل بيوم التأسيس السعودي؟", answer:"فبراير (22 فبراير)", emoji:"📆"}
+    ]
+  },
+  "موسم الرياض": {
+    easy:[
+      {question:"في أي فصل من السنة يُقام موسم الرياض عادة؟", answer:"فصل الشتاء", emoji:"🎡"},
+      {question:"ما نوع الفعاليات الرئيسية التي يشتهر بها موسم الرياض؟", answer:"فعاليات ترفيهية وحفلات ومطاعم عالمية", emoji:"🎉"}
+    ],
+    medium:[
+      {question:"ما اسم الجهة التي تنظّم موسم الرياض والمواسم الترفيهية الكبرى في المملكة؟", answer:"الهيئة العامة للترفيه", emoji:"🎪"},
+      {question:"ما اسم أشهر منطقة داخل موسم الرياض تحوي أكبر عدد من الألعاب والعروض؟", answer:"بوليفارد رياض سيتي", emoji:"🎢"}
+    ],
+    hard:[
+      {question:"ما اسم أكبر بوابة ترفيهية عالمية افتُتحت ضمن موسم الرياض وتُعد من أكبر مشاريع الترفيه بالعالم؟", answer:"بوليفارد رياض سيتي", emoji:"🎢"},
+      {question:"في أي عام أُطلق موسم الرياض لأول مرة؟", answer:"عام 2019م", emoji:"🗓️"}
+    ]
+  },
+  "سوبرماركت": {
+    easy:[
+      {question:"ما اسم القسم في السوبرماركت الذي تجد فيه الخضار والفواكه الطازجة؟", answer:"قسم الخضار والفواكه", emoji:"🥦"},
+      {question:"ما اسم العربة التي يستخدمها المتسوق لوضع مشترياته داخل المتجر؟", answer:"عربة التسوق", emoji:"🛒"}
+    ],
+    medium:[
+      {question:"ما اسم البطاقة التي يستخدمها الزبون لتجميع نقاط عند التسوق من نفس المتجر؟", answer:"بطاقة الولاء (نقاط)", emoji:"💳"},
+      {question:"ما اسم الرمز المخطط الذي يُمسح عند دفع ثمن المنتج في الكاشير؟", answer:"الباركود", emoji:"📊"}
+    ],
+    hard:[
+      {question:"ما المصطلح التجاري الذي يُطلق على وضع المنتجات في أماكن بارزة لجذب انتباه المتسوق؟", answer:"العرض الترويجي (Merchandising)", emoji:"🛍️"},
+      {question:"ما اسم النظام الذي يتيح للزبون الدفع ومسح المنتجات بنفسه دون كاشير؟", answer:"الكاشير الذاتي (Self-Checkout)", emoji:"🖥️"}
+    ]
+  },
+  "مطاعم السعودية": {
+    easy:[
+      {question:"ما اسم الطبق السعودي الشهير المكوّن من الأرز واللحم ويُعتبر الطبق الوطني؟", answer:"الكبسة", emoji:"🍚"},
+      {question:"ما اسم الخبز التقليدي الرقيق المشهور في المنطقة الشرقية والنجدية؟", answer:"خبز التميس", emoji:"🫓"}
+    ],
+    medium:[
+      {question:"ما اسم الأكلة الشعبية المصنوعة من القمح المجروش وتُطبخ مع اللحم أو الدجاج؟", answer:"الجريش", emoji:"🌾"},
+      {question:"ما اسم الحساء الشعبي الحساوي المصنوع من الخضار وقطع اللحم؟", answer:"المرقوق", emoji:"🍲"}
+    ],
+    hard:[
+      {question:"ما اسم الطبق الحساوي الشهير المصنوع من الأرز المطبوخ بمرق اللحم الغامق؟", answer:"مجبوس أو مرقوق (حسب المنطقة)", emoji:"🍛"},
+      {question:"ما اسم الحلى الشعبي المصنوع من الدقيق المحمّص بالسمن والسكر؟", answer:"المحلبية أو المفركة (حسب المنطقة)", emoji:"🍮"}
+    ]
+  },
+  "شعارات سعودية": {
+    easy:[
+      {question:"ما هو الرمز الرئيسي الموجود في علم المملكة العربية السعودية إلى جانب الشهادتين؟", answer:"السيف", emoji:"🏳️"},
+      {question:"ما اسم الناقل الوطني الجوي الرسمي للمملكة العربية السعودية؟", answer:"الخطوط السعودية", emoji:"✈️"}
+    ],
+    medium:[
+      {question:"ما اسم الشعار الوطني السعودي المكوّن من نخلة وسيفين متقاطعين؟", answer:"شعار النخلة والسيفين", emoji:"🌴"},
+      {question:"ما اسم شركة الاتصالات السعودية التي شعارها باللون الأخضر والأزرق؟", answer:"STC", emoji:"📶"}
+    ],
+    hard:[
+      {question:"ما اسم أول بنك سعودي تأسس في المملكة؟", answer:"البنك الأهلي التجاري", emoji:"🏦"},
+      {question:"ما اسم الشركة السعودية العملاقة المتخصصة في البتروكيماويات وشعارها باللون الأزرق؟", answer:"سابك (SABIC)", emoji:"🏭"}
+    ]
+  },
+  "سيرة ذاتية": {
+    easy:[
+      {question:"ما هو أول شيء يُذكر عادة في بداية أي سيرة ذاتية (CV)؟", answer:"الاسم والمعلومات الشخصية", emoji:"👤"},
+      {question:"ما هو الاختصار الإنجليزي الشائع للسيرة الذاتية؟", answer:"CV (Curriculum Vitae)", emoji:"📄"}
+    ],
+    medium:[
+      {question:"ما المصطلح الذي يُطلق على الملخص القصير الذي يوضع في بداية السيرة الذاتية لتعريف المتقدم بنفسه؟", answer:"الملخص الشخصي (Profile Summary)", emoji:"📝"},
+      {question:"ما اسم المنصة المهنية العالمية التي تُستخدم لعرض السيرة الذاتية والتواصل الوظيفي؟", answer:"لينكدإن (LinkedIn)", emoji:"💼"}
+    ],
+    hard:[
+      {question:"ما اسم المهارات التي تتعلق بالتعامل مع الآخرين والتواصل، وتُذكر عادة في السير الذاتية؟", answer:"المهارات الشخصية (Soft Skills)", emoji:"🤝"},
+      {question:"ما المصطلح الذي يُطلق على خطاب قصير يُرفق مع السيرة الذاتية لتقديم المتقدم لجهة التوظيف؟", answer:"خطاب التقديم (Cover Letter)", emoji:"✉️"}
+    ]
+  },
+  "عالم الشعر": {
+    easy:[
+      {question:"ما اسم الفن الأدبي الذي يعتمد على الوزن والقافية للتعبير عن المشاعر؟", answer:"الشعر", emoji:"✍️"},
+      {question:"ما اسم أصغر وحدة في البيت الشعري تتكرر لتكوين الوزن؟", answer:"التفعيلة", emoji:"🎵"}
+    ],
+    medium:[
+      {question:"من يُلقّب بـ(أمير الشعراء) في الأدب العربي الحديث؟", answer:"أحمد شوقي", emoji:"👑"},
+      {question:"ما اسم الشاعر الجاهلي صاحب المعلقة الشهيرة (قفا نبكِ)؟", answer:"امرؤ القيس", emoji:"📜"}
+    ],
+    hard:[
+      {question:"ما اسم البحر الشعري الذي يُعد الأكثر استخداماً في الشعر العربي القديم؟", answer:"بحر الطويل", emoji:"📜"},
+      {question:"ما اسم علم العروض الذي وضع أوزان الشعر العربي؟", answer:"الخليل بن أحمد الفراهيدي (واضع علم العروض)", emoji:"📐"}
+    ]
+  },
+  "عطور عالمية": {
+    easy:[
+      {question:"ما اسم الدولة الأوروبية المشهورة عالمياً بصناعة العطور الفاخرة؟", answer:"فرنسا", emoji:"🇫🇷"},
+      {question:"ما اسم أشهر دار أزياء فرنسية تُصدر عطراً باسم (شانيل رقم 5)؟", answer:"شانيل (Chanel)", emoji:"🎀"}
+    ],
+    medium:[
+      {question:"ما اسم المدينة الفرنسية التي تُعد عاصمة صناعة العطور عالمياً؟", answer:"غراس (Grasse)", emoji:"🌸"},
+      {question:"ما المصطلح الذي يُطلق على الطبقة الأولى من رائحة العطر التي تظهر فور الرش؟", answer:"الرائحة العلوية (Top Note)", emoji:"🌬️"}
+    ],
+    hard:[
+      {question:"ما اسم المادة التي تُستخدم كأساس لتثبيت رائحة العطر وإطالة مدة بقائها؟", answer:"المثبت (Fixative)", emoji:"🧪"},
+      {question:"ما اسم أعلى تركيز للعطر من حيث نسبة الزيوت العطرية، ويُعتبر الأغلى والأطول ثباتاً؟", answer:"البارفان (Parfum / Extrait de Parfum)", emoji:"💎"}
+    ]
+  },
+  "أكل وبراد": {
+    easy:[
+      {question:"ما الغرض الرئيسي من وضع الطعام في البراد (الثلاجة)؟", answer:"حفظ الطعام وتبريده لإبطاء فساده", emoji:"🧊"},
+      {question:"في أي رف من الثلاجة يُفضَّل وضع اللحوم النيئة عادة؟", answer:"الرف السفلي", emoji:"🥩"}
+    ],
+    medium:[
+      {question:"ما اسم الجهاز المستخدم لتجميد الطعام على درجة حرارة أقل من الثلاجة العادية؟", answer:"الفريزر", emoji:"❄️"},
+      {question:"ما اسم الطريقة التقليدية لحفظ اللحم عن طريق تجفيفه وتمليحه بدون تبريد؟", answer:"القديد", emoji:"🥓"}
+    ],
+    hard:[
+      {question:"ما هي درجة الحرارة التقريبية الموصى بها للحفاظ على سلامة الطعام داخل الثلاجة؟", answer:"حوالي 4 درجات مئوية", emoji:"🌡️"},
+      {question:"ما اسم الغاز المستخدم تقليدياً كمادة تبريد في أجهزة الثلاجات قبل استبداله بأنواع أكثر أماناً للبيئة؟", answer:"الفريون (CFC)", emoji:"🧊"}
+    ]
+  },
+  "منتجات": {
+    easy:[
+      {question:"ما اسم الشركة السويدية المشهورة عالمياً بأثاث المنازل القابل للتركيب الذاتي؟", answer:"إيكيا (IKEA)", emoji:"🛋️"},
+      {question:"ما اسم أشهر مشروب غازي داكن اللون يُنتج عالمياً منذ أكثر من قرن؟", answer:"كوكاكولا", emoji:"🥤"}
+    ],
+    medium:[
+      {question:"ما اسم شركة الألعاب الدنماركية الشهيرة بمكعبات البناء البلاستيكية الملونة؟", answer:"ليجو (LEGO)", emoji:"🧱"},
+      {question:"ما اسم أول منتج أطلقته شركة آبل قبل أجهزة الآيفون والماك؟", answer:"جهاز Apple I", emoji:"💻"}
+    ],
+    hard:[
+      {question:"ما اسم أول منتج تجاري حمل الباركود عند مسحه في متجر عام 1974م؟", answer:"علكة رجلي (Wrigley's)", emoji:"🍬"},
+      {question:"ما اسم الشركة اليابانية صاحبة أشهر منتجات ألعاب الفيديو مثل ماريو؟", answer:"نينتندو (Nintendo)", emoji:"🎮"}
+    ]
+  },
+  "شعارات عالمية": {
+    easy:[
+      {question:"ما اسم الشركة صاحبة الشعار الذي يمثل تفاحة مقضومة؟", answer:"آبل (Apple)", emoji:"🍎"},
+      {question:"ما اسم الشركة صاحبة شعار حرف S أصفر داخل درع؟", answer:"سوبرمان (ليست شركة، بل شخصية - يُقبل: Superman)", emoji:"🦸"}
+    ],
+    medium:[
+      {question:"ما اسم الشركة الرياضية صاحبة شعار (Swoosh) على شكل علامة صح؟", answer:"نايكي (Nike)", emoji:"✔️"},
+      {question:"ما اسم شركة السيارات اليابانية التي شعارها ثلاث بيضاوات متقاطعة؟", answer:"ميتسوبيشي (Mitsubishi)", emoji:"🚙"}
+    ],
+    hard:[
+      {question:"ما اسم الشركة صاحبة شعار الحرف M الأصفر المقوّس؟", answer:"ماكدونالدز (McDonald's)", emoji:"🍟"},
+      {question:"ما اسم شركة القهوة العالمية التي شعارها حورية بحر خضراء؟", answer:"ستاربكس (Starbucks)", emoji:"☕"}
+    ]
+  },
+  "شعارات": {
+    easy:[
+      {question:"ما اسم الشركة صاحبة شعار حرف F الأزرق المستخدم في تطبيق التواصل الاجتماعي الشهير؟", answer:"فيسبوك (Facebook)", emoji:"📘"},
+      {question:"ما اسم التطبيق صاحب شعار طائر أزرق (قبل تغييره)؟", answer:"تويتر (Twitter)", emoji:"🐦"}
+    ],
+    medium:[
+      {question:"ما اسم شركة السيارات الألمانية التي شعارها دائرة مقسّمة لأربعة أرباع زرقاء وبيضاء؟", answer:"بي إم دبليو (BMW)", emoji:"🚘"},
+      {question:"ما اسم التطبيق صاحب شعار كاميرا ملونة مستديرة؟", answer:"إنستغرام (Instagram)", emoji:"📸"}
+    ],
+    hard:[
+      {question:"ما اسم الشركة التقنية التي شعارها نافذة ملونة مقسّمة لأربعة أقسام؟", answer:"مايكروسوفت (Microsoft)", emoji:"🪟"},
+      {question:"ما اسم شركة الطيران السعودية التي شعارها نخلة خضراء داخل دائرة؟", answer:"الخطوط الجوية السعودية", emoji:"✈️"}
+    ]
+  },
+  "ميمز": {
+    easy:[
+      {question:"ما المصطلح الذي يُطلق على الصور أو المقاطع الفكاهية المنتشرة بسرعة عبر الإنترنت؟", answer:"ميم (Meme)", emoji:"😂"},
+      {question:"ما المصطلح الذي يُطلق على انتشار محتوى معيّن بسرعة كبيرة بين المستخدمين؟", answer:"فيروسي / تريند (Viral/Trending)", emoji:"🔥"}
+    ],
+    medium:[
+      {question:"ما هي أكثر منصة يُستخدم فيها تعبير (تريند) لوصف انتشار محتوى معيّن بسرعة؟", answer:"منصات التواصل الاجتماعي (مثل X وتيك توك)", emoji:"📈"},
+      {question:"ما المصطلح الذي يُطلق على مقطع فيديو قصير جداً ومتكرر يُستخدم غالباً للفكاهة؟", answer:"ريلز / تيك توك (Short-form video)", emoji:"🎬"}
+    ],
+    hard:[
+      {question:"ما المصطلح الذي يُطلق على الميمز التي تُعاد صياغتها وتعديلها بأشكال مختلفة مع بقاء الفكرة الأساسية؟", answer:"ميم قابل للتحوير (Remix/Template)", emoji:"🔁"},
+      {question:"من صاغ مصطلح (Meme) لأول مرة في كتابه الجين الأناني عام 1976م؟", answer:"ريتشارد دوكينز", emoji:"🧬"}
+    ]
+  },
+  "الذكاء الاصطناعي": {
+    easy:[
+      {question:"ما اسم الشركة التي طوّرت نموذج الذكاء الاصطناعي (Claude)؟", answer:"أنثروبيك (Anthropic)", emoji:"🤖"},
+      {question:"ما اسم برنامج الدردشة الذكي الأشهر التابع لشركة OpenAI؟", answer:"تشات جي بي تي (ChatGPT)", emoji:"💬"}
+    ],
+    medium:[
+      {question:"ما المصطلح الذي يُطلق على تدريب النماذج على كميات ضخمة من البيانات النصية لفهم اللغة؟", answer:"نماذج اللغة الكبيرة (LLM)", emoji:"🧠"},
+      {question:"ما المصطلح الذي يصف قدرة الذكاء الاصطناعي على إنشاء محتوى جديد كالنصوص والصور؟", answer:"الذكاء الاصطناعي التوليدي (Generative AI)", emoji:"🎨"}
+    ],
+    hard:[
+      {question:"ما اسم الاختبار الذي اقترحه العالم آلان تورينج لتقييم مدى ذكاء الآلة مقارنة بالإنسان؟", answer:"اختبار تورينج", emoji:"🧪"},
+      {question:"ما اسم البنية التقنية التي أحدثت ثورة في نماذج اللغة عام 2017م وتقوم عليها معظم النماذج الحديثة؟", answer:"المحوّلات (Transformers)", emoji:"⚙️"}
+    ]
+  },
+  "منو المشهور": {
+    easy:[
+      {question:"ما المصطلح الذي يُطلق على وصف شخص معروف على نطاق واسع بسبب عمله أو إنجازاته؟", answer:"مشهور / شخصية عامة", emoji:"🎩"},
+      {question:"ما المصطلح الذي يُطلق على الشخص الذي يمثّل بلاده أو مؤسسة دولياً بسبب شهرته؟", answer:"سفير (Ambassador)", emoji:"🌍"}
+    ],
+    medium:[
+      {question:"ما المصطلح الذي يُطلق على الشخص الذي يمثل منتجاً أو علامة تجارية بصورته وشهرته؟", answer:"سفير العلامة التجارية", emoji:"⭐"},
+      {question:"ما المصطلح الذي يُطلق على الشخص المشهور جداً لدرجة أن الجميع يعرفه دون تعريف؟", answer:"أيقونة / نجم عالمي (Icon)", emoji:"🌟"}
+    ],
+    hard:[
+      {question:"ما المصطلح الذي يُطلق على تتبع أخبار المشاهير وحياتهم الخاصة إعلامياً؟", answer:"صحافة المشاهير (Tabloid/Celebrity News)", emoji:"📰"},
+      {question:"ما المصطلح الذي يُطلق على المصورين الذين يلاحقون المشاهير لالتقاط صور خاصة لهم؟", answer:"مصورو الباباراتزي", emoji:"📷"}
+    ]
+  },
+  "مين المؤثر": {
+    easy:[
+      {question:"ما اسم الشخص الذي ينشئ محتوى على منصات التواصل الاجتماعي ويؤثر في قرارات متابعيه؟", answer:"مؤثر (Influencer)", emoji:"🕵️"},
+      {question:"ما اسم أشهر منصة فيديوهات يستخدمها كثير من صناع المحتوى لنشر أعمالهم؟", answer:"يوتيوب (YouTube)", emoji:"📹"}
+    ],
+    medium:[
+      {question:"ما المصطلح الذي يُطلق على تعاون المؤثر مع شركة للترويج لمنتج مقابل مبلغ مالي؟", answer:"إعلان مدفوع / تعاون تجاري", emoji:"🤝"},
+      {question:"ما اسم الجائزة (الزر) التي تمنحها يوتيوب للقناة عند وصولها لمليون مشترك؟", answer:"الزر الذهبي", emoji:"🏆"}
+    ],
+    hard:[
+      {question:"ما المقياس الأكثر استخداماً لتقييم مدى تفاعل متابعي المؤثر مع محتواه؟", answer:"معدل التفاعل (Engagement Rate)", emoji:"📊"},
+      {question:"ما المصطلح الذي يُطلق على المؤثرين أصحاب المتابعين الأقل عدداً لكن الأعلى تفاعلاً وثقة؟", answer:"المؤثرون الصغار (Micro-Influencers)", emoji:"🔬"}
+    ]
+  },
+  "صوت المشهور": {
+    easy:[
+      {question:"ما الحاسة التي نستخدمها للتعرف على شخص من خلال طريقة كلامه فقط؟", answer:"حاسة السمع", emoji:"👂"},
+      {question:"ما اسم الجهاز الذي يُستخدم لتسجيل الصوت بجودة عالية في الاستوديوهات؟", answer:"الميكروفون", emoji:"🎙️"}
+    ],
+    medium:[
+      {question:"ما المصطلح الذي يُطلق على الشخص الذي يقلّد أصوات المشاهير بشكل احترافي؟", answer:"مقلّد أصوات", emoji:"🎙️"},
+      {question:"ما اسم الفن الذي يقوم فيه الفنان بأداء أصوات شخصيات كرتونية متعددة؟", answer:"الدوبلاج (التعليق الصوتي)", emoji:"🎭"}
+    ],
+    hard:[
+      {question:"ما المصطلح الذي يُطلق على الصوت المسجّل لشخصية كرتونية أو دور معيّن دون ظهور الوجه؟", answer:"التعليق الصوتي (Voice-over)", emoji:"🎧"},
+      {question:"ما اسم البرنامج التقني الذي يمكنه توليد صوت مطابق لصوت شخص معيّن بالذكاء الاصطناعي؟", answer:"استنساخ الصوت (Voice Cloning)", emoji:"🧬"}
+    ]
+  },
+  "طب الأسنان": {
+    easy:[
+      {question:"ما اسم الطبيب المختص بعلاج الأسنان واللثة؟", answer:"طبيب الأسنان", emoji:"🦷"},
+      {question:"كم عدد الأسنان الطبيعية لدى الإنسان البالغ عادة؟", answer:"32 سناً", emoji:"😁"}
+    ],
+    medium:[
+      {question:"ما اسم الطبقة الصلبة الخارجية التي تغطي سطح السن وتحميه؟", answer:"مينا الأسنان (المينا)", emoji:"🪥"},
+      {question:"ما اسم الجهاز المعدني الذي يُستخدم لتقويم وتصحيح ترتيب الأسنان؟", answer:"التقويم", emoji:"😬"}
+    ],
+    hard:[
+      {question:"ما اسم العلاج الذي يُستخدم لإنقاذ السن المصاب بتسوس عميق وصل إلى العصب؟", answer:"علاج العصب (سحب العصب)", emoji:"💉"},
+      {question:"ما اسم المادة اللزجة التي تتكوّن على الأسنان وتحتوي على البكتيريا المسببة للتسوس؟", answer:"البلاك (اللويحة الجرثومية)", emoji:"🦠"}
+    ]
+  }
+};
+function normalizeBank(bank){
+  Object.keys(bank).forEach(cat=>{
+    ['easy','medium','hard'].forEach(k=>{
+      (bank[cat][k]||[]).forEach(q=>{
+        if(q.needsImage===undefined) q.needsImage=false;
+        if(q.imageQuery===undefined) q.imageQuery='';
+        if(q.needsAudio===undefined) q.needsAudio=false;
+        if(q.audioText===undefined) q.audioText='';
+        if(!q.emoji) q.emoji='❓';
+      });
+      bank[cat][k] = bank[cat][k] || [];
+    });
+  });
+  return bank;
+}
+normalizeBank(DEFAULT_BANK);
+const BANK_VERSION = 2;
+let QBANK = normalizeBank(loadJSON('mr_bank', DEFAULT_BANK));
+const savedBankVer = loadJSON('mr_bank_ver', 1);
+if(savedBankVer < BANK_VERSION){
+  Object.keys(DEFAULT_BANK).forEach(cat=>{
+    QBANK[cat] = QBANK[cat] || {easy:[], medium:[], hard:[]};
+    ['easy','medium','hard'].forEach(k=>{
+      const existingTexts = new Set((QBANK[cat][k]||[]).map(q=>q.question));
+      DEFAULT_BANK[cat][k].forEach(q=>{
+        if(!existingTexts.has(q.question)) QBANK[cat][k].push(Object.assign({},q));
+      });
+    });
+  });
+  saveJSON('mr_bank', QBANK);
+  saveJSON('mr_bank_ver', BANK_VERSION);
+}
+let bankUsedIdx = {}; // "category-diff" -> Set of used indexes this game, resets each new game
+
+/* ============================ SETUP SCREEN ============================ */
+function renderLifelineChips(){
+  ['A','B'].forEach(team=>{
+    const wrap = document.getElementById('lifelines'+team);
+    wrap.innerHTML='';
+    LIFELINES.forEach(l=>{
+      const chip=document.createElement('div');
+      chip.className='lifeline-chip';
+      chip.innerHTML='<span class="ic">'+l.ic+'</span>'+l.name;
+      chip.onclick=()=>toggleLifeline(team, l.key, chip);
+      wrap.appendChild(chip);
+    });
+  });
+}
+function toggleLifeline(team, key, chipEl){
+  Sound.select();
+  const arr = teamSetup[team].lifelines;
+  const idx = arr.indexOf(key);
+  if(idx>-1){
+    arr.splice(idx,1);
+    chipEl.classList.remove('sel');
+  } else {
+    if(arr.length>=3){ return; }
+    arr.push(key);
+    chipEl.classList.add('sel');
+  }
+  document.getElementById('count'+team).textContent = arr.length+' / 3';
+}
+renderLifelineChips();
+
+function goToCategories(){
+  teamSetup.A.name = document.getElementById('setupNameA').value.trim() || 'الفريق الأول';
+  teamSetup.B.name = document.getElementById('setupNameB').value.trim() || 'الفريق الثاني';
+  if(teamSetup.A.lifelines.length<3 || teamSetup.B.lifelines.length<3){
+    alert('لازم كل فريق يختار 3 وسائل مساعدة بالضبط');
+    return;
+  }
+  document.getElementById('screen-setup').classList.remove('active');
+  document.getElementById('screen-categories').classList.add('active');
+  renderCatGrid();
+}
+function goToSetup(){
+  document.getElementById('screen-categories').classList.remove('active');
+  document.getElementById('screen-setup').classList.add('active');
+}
+
+/* ============================ CATEGORY SCREEN ============================ */
+function renderCatGrid(){
+  const grid = document.getElementById('catGrid');
+  grid.innerHTML='';
+  CATEGORIES.forEach(c=>{
+    grid.appendChild(makeCatCard(c));
+  });
+  updateSelStatus();
+}
+function makeCatCard(c){
+  const sel = selectedCats.some(s=>s.name===c.name);
+  const card=document.createElement('div');
+  card.className='cat-pick'+(sel?' sel':'');
+  card.innerHTML='<div class="check">✓</div><span class="ic">'+c.ic+'</span><div class="nm">'+c.name+'</div>';
+  card.onclick=()=>toggleCategory(c, card);
+  return card;
+}
+function toggleCategory(c, card){
+  Sound.select();
+  const idx = selectedCats.findIndex(s=>s.name===c.name);
+  if(idx>-1){
+    selectedCats.splice(idx,1);
+    card.classList.remove('sel');
+  } else {
+    selectedCats.push(c);
+    card.classList.add('sel');
+  }
+  updateSelStatus();
+}
+function addCustomCategory(){
+  const input = document.getElementById('customCatName');
+  const name = input.value.trim();
+  if(!name) return;
+  if(CATEGORIES.some(c=>c.name===name) || selectedCats.some(c=>c.name===name)){
+    input.value=''; return;
+  }
+  const c = {name, ic:'✨'};
+  CATEGORIES.push(c);
+  selectedCats.push(c);
+  document.getElementById('catGrid').appendChild(makeCatCard(c));
+  // mark it selected visually (last child)
+  document.getElementById('catGrid').lastChild.classList.add('sel');
+  input.value='';
+  updateSelStatus();
+}
+function updateSelStatus(){
+  const n = selectedCats.length;
+  const roundsCount = Math.ceil(n/6) || 0;
+  document.getElementById('selStatus').innerHTML =
+    'اخترت <b>'+n+'</b> فئة — راح تتكوّن <b>'+roundsCount+'</b> جولة'+(n%6!==0 && n>0 ? ' (آخر جولة فيها '+(n%6)+' فئات)':'');
+  document.getElementById('startBtn').disabled = n<1;
+}
+
+/* ============================ START GAME ============================ */
+function startGame(){
+  Sound.start();
+  questionCache = {};
+  askedByCategory = {};
+  bankUsedIdx = {};
+  rounds = [];
+  for(let i=0;i<selectedCats.length;i+=6){
+    rounds.push(selectedCats.slice(i,i+6));
+  }
+  stateUsed = {};
+  rounds.forEach((r,ri)=>{ stateUsed[ri] = r.map(()=>[false,false,false]); });
+  scores = {A:0,B:0};
+  lifelineUsed = {A:[], B:[]};
+  activeRound = 0;
+
+  document.getElementById('gameNameA').textContent = '🟢 '+teamSetup.A.name;
+  document.getElementById('gameNameB').textContent = '🟡 '+teamSetup.B.name;
+  document.getElementById('scoreA').textContent = 0;
+  document.getElementById('scoreB').textContent = 0;
+  document.getElementById('btnAwardA').textContent = 'لـ'+teamSetup.A.name;
+  document.getElementById('btnAwardB').textContent = 'لـ'+teamSetup.B.name;
+  renderLifelineDisplay();
+
+  document.getElementById('screen-categories').classList.remove('active');
+  document.getElementById('screen-game').classList.add('active');
+  renderTabs();
+  renderBoard();
+}
+
+function renderLifelineDisplay(){
+  ['A','B'].forEach(team=>{
+    const wrap = document.getElementById('lifeDisplay'+team);
+    wrap.innerHTML='';
+    teamSetup[team].lifelines.forEach(key=>{
+      const l = LIFELINES.find(x=>x.key===key);
+      const used = lifelineUsed[team].includes(key);
+      const el=document.createElement('div');
+      el.className='ic'+(used?' used':'');
+      el.textContent=l.ic;
+      el.title=l.name;
+      el.onclick=()=>{
+        if(used) return;
+        lifelineUsed[team].push(key);
+        renderLifelineDisplay();
+      };
+      wrap.appendChild(el);
+    });
+  });
+}
+
+function backToSetupConfirm(){
+  if(!confirm('بدء لعبة جديدة؟ بيروح كل التقدم الحالي')) return;
+  document.getElementById('screen-game').classList.remove('active');
+  document.getElementById('screen-setup').classList.add('active');
+  selectedCats = [];
+  questionCache = {};
+  askedByCategory = {};
+  bankUsedIdx = {};
+}
+
+/* ============================ BOARD ============================ */
+function renderTabs(){
+  const tabs = document.getElementById('roundTabs');
+  tabs.innerHTML='';
+  if(rounds.length<=1) return;
+  rounds.forEach((r,i)=>{
+    const b=document.createElement('button');
+    b.className='round-tab'+(i===activeRound?' active':'');
+    b.textContent='الجولة '+(i+1);
+    b.onclick=()=>{activeRound=i; renderTabs(); renderBoard();};
+    tabs.appendChild(b);
+  });
+}
+
+let POINTS = loadJSON('mr_points', [100,250,400]);
+const DIFF = ['سهل','متوسط','صعب'];
+const DIFFKEY = ['easy','medium','hard'];
+
+function renderBoard(){
+  const cats = rounds[activeRound];
+  const board = document.getElementById('board');
+  board.style.gridTemplateColumns = 'repeat('+cats.length+', 1fr)';
+  board.innerHTML='';
+  cats.forEach(c=>{
+    const h=document.createElement('div');
+    h.className='cat-header';
+    h.innerHTML='<span class="ic">'+c.ic+'</span><span>'+c.name+'</span>';
+    board.appendChild(h);
+  });
+  for(let row=0; row<3; row++){
+    cats.forEach((c, ci)=>{
+      const used = stateUsed[activeRound][ci][row];
+      const cell=document.createElement('div');
+      cell.className='cell'+(used?' used':'');
+      cell.textContent = used ? '✓' : POINTS[row];
+      if(!used){ cell.onclick=()=>openQuestion(ci, row); }
+      board.appendChild(cell);
+    });
+  }
+}
+
+/* ============================ QUESTION (AI) ============================ */
+async function openQuestion(ci, row){
+  Sound.open();
+  const cat = rounds[activeRound][ci];
+  current = {ci, row, cat};
+  document.getElementById('qcat').innerHTML = cat.ic+' '+cat.name;
+  document.getElementById('qpoints').textContent = POINTS[row]+' نقطة';
+  document.getElementById('cornersBar').style.display='none';
+  document.getElementById('qbody').innerHTML = '<div class="loadbox">⏳ جاري إحضار السؤال...</div>';
+  document.getElementById('overlay').classList.add('show');
+
+  const cacheKey = activeRound+'-'+ci+'-'+row;
+  let item = questionCache[cacheKey];
+  if(!item){
+    item = pickFromBank(cat.name, row);
+    if(item){
+      questionCache[cacheKey] = item;
+    } else {
+      // no bank question available for this category/difficulty — offer a quick inline add instead of a broken AI call
+      showQuickAddForm(cat, row, ci);
+      return;
+    }
+  }
+  renderQuestionBody(item);
+}
+
+function showQuickAddForm(cat, row, ci){
+  document.getElementById('qbody').innerHTML =
+    '<div class="loadbox" style="padding-bottom:6px;">ما فيه سؤال محفوظ لهذه الفئة والمستوى بعد 🙂<br>اكتبه الحين وبيُحفظ تلقائياً بالبنك للمرات الجاية:</div>'+
+    '<div class="admin-row" style="flex-direction:column; align-items:stretch; margin-top:10px;">'+
+    '<input type="text" id="quickQText" placeholder="نص السؤال">'+
+    '<input type="text" id="quickQAnswer" placeholder="الإجابة الصحيحة">'+
+    '<input type="text" id="quickQEmoji" placeholder="إيموجي (اختياري)">'+
+    '<button class="btn btn-answer" style="margin-top:6px;" onclick="quickAddAndShow('+ci+','+row+')">حفظ وعرض السؤال</button>'+
+    '</div>';
+  document.getElementById('cornersBar').style.display='flex';
+  document.getElementById('answerCorner').style.visibility='hidden';
+}
+
+function quickAddAndShow(ci, row){
+  const cat = rounds[activeRound][ci];
+  const q = document.getElementById('quickQText').value.trim();
+  const a = document.getElementById('quickQAnswer').value.trim();
+  const emoji = document.getElementById('quickQEmoji').value.trim() || '❓';
+  if(!q || !a){ alert('لازم تكتب السؤال والإجابة'); return; }
+  const diffKey = DIFFKEY[row];
+  QBANK[cat.name] = QBANK[cat.name] || {easy:[], medium:[], hard:[]};
+  const newItem = {question:q, answer:a, emoji, needsImage:false, imageQuery:'', needsAudio:false, audioText:''};
+  QBANK[cat.name][diffKey].push(newItem);
+  saveJSON('mr_bank', QBANK);
+  pushToCloud();
+  const usedKey = cat.name+'-'+diffKey;
+  bankUsedIdx[usedKey] = bankUsedIdx[usedKey] || new Set();
+  bankUsedIdx[usedKey].add(QBANK[cat.name][diffKey].length-1);
+  const cacheKey = activeRound+'-'+ci+'-'+row;
+  questionCache[cacheKey] = newItem;
+  Sound.award();
+  renderQuestionBody(newItem);
+}
+
+function pickFromBank(categoryName, row){
+  const diffKey = DIFFKEY[row];
+  const list = QBANK[categoryName] && QBANK[categoryName][diffKey];
+  if(!list || !list.length) return null;
+  const usedKey = categoryName+'-'+diffKey;
+  bankUsedIdx[usedKey] = bankUsedIdx[usedKey] || new Set();
+  const available = list.map((q,i)=>i).filter(i=>!bankUsedIdx[usedKey].has(i));
+  let idx;
+  if(available.length){
+    idx = available[Math.floor(Math.random()*available.length)];
+  } else {
+    // every question in the bank for this slot was already used this game — reuse a random one rather than error out
+    idx = Math.floor(Math.random()*list.length);
+  }
+  bankUsedIdx[usedKey].add(idx);
+  return Object.assign({}, list[idx]);
+}
+
+async function generateQuestion(category, difficulty, attempt){
+  attempt = attempt || 1;
+  const avoid = (askedByCategory[category]||[]).slice(-8);
+  const systemPrompt = `أنت معدّ أسئلة لعبة تريفيا عائلية باللغة العربية الفصحى البسيطة المفهومة للجميع.
+أعطِ سؤالاً واحداً فقط ضمن الفئة ومستوى الصعوبة المطلوبين، مع إجابة صحيحة مختصرة (كلمة أو جملة قصيرة).
+
+مهم جداً - الوسائط:
+- بعض الفئات تحتاج صورة توضح السؤال بشكل طبيعي (مثل: معالم، شعارات، أعلام، حيوانات، سيارات، منتجات، أطباق، أماكن، شخصيات مشهورة تُعرف بالشكل). في هذه الحالة اجعل needsImage=true وأعطِ imageQuery بالإنجليزية (2-4 كلمات) يصف بدقة الشيء المطلوب البحث عن صورته (مثال: "Kingdom Tower Riyadh" أو "Toyota Land Cruiser").
+- بعض الفئات تعتمد على الصوت أو النطق (مثل: لهجات، أصوات مشاهير، أغاني، نطق كلمات). في هذه الحالة اجعل needsAudio=true وأعطِ audioText نص عربي قصير (كلمة أو جملة قصيرة) يُراد نطقه بصوت عالٍ كجزء من السؤال أو كتلميح (مثال: عبارة باللهجة يخمّن اللاعبون معناها، أو اسم يُنطق ليخمنوا صاحبه).
+- إذا كانت الفئة نصية بحتة (مثل تاريخ، معلومات عامة، أدب) اجعل needsImage=false و needsAudio=false، واستخدم رمز إيموجي مناسب بدلاً من ذلك.
+- سؤال واحد لا يحتاج غالباً أكثر من وسيلة وسائط واحدة (صورة أو صوت)، اختر الأنسب فقط أو لا شيء.
+
+الشروط العامة:
+- لا تكرر أي سؤال من قائمة الأسئلة السابقة المرسلة لك لنفس الفئة.
+- لا تستخدم محتوى سياسياً أو دينياً مثيراً للجدل أو غير لائق.
+- إن كانت الفئة اسم شخص أو علامة تجارية حساسة، اجعل السؤال معلوماتياً عاماً ومحايداً.
+- أعد الناتج بصيغة JSON صِرف فقط، بدون أي نص قبله أو بعده، بدون علامات ماركداون وبدون أي شرح، يبدأ مباشرة بـ { وينتهي بـ }. تأكد أن القيم نصوص صحيحة (escape أي علامة اقتباس داخلية). الشكل المطلوب بالضبط:
+{"question":"...","answer":"...","emoji":"...","needsImage":false,"imageQuery":"","needsAudio":false,"audioText":""}`;
+
+  const userPrompt = `الفئة: ${category}
+مستوى الصعوبة: ${difficulty}
+${avoid.length? 'أسئلة سابقة لا تكررها:\n- '+avoid.join('\n- ') : ''}
+أعطني سؤال تريفيا جديد ومختلف تماماً ضمن هذه الفئة بهذا المستوى. رد بكائن JSON فقط حسب الشكل المطلوب.`;
+
+  let data;
+  try{
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userPrompt }]
+      })
+    });
+    data = await response.json();
+  } catch(networkErr){
+    console.error('network error', networkErr);
+    if(attempt<3) return generateQuestion(category, difficulty, attempt+1);
+    throw networkErr;
+  }
+
+  if(!data || !Array.isArray(data.content)){
+    console.error('unexpected API response', data);
+    if(attempt<3) return generateQuestion(category, difficulty, attempt+1);
+    throw new Error('no content in response: '+JSON.stringify(data).slice(0,300));
+  }
+
+  const text = data.content.map(b=> b.text || '').join('\n').trim();
+  let clean = text.replace(/```json|```/g,'').trim();
+  const match = clean.match(/\{[\s\S]*\}/);
+  if(match) clean = match[0];
+
+  let parsed;
+  try{
+    parsed = JSON.parse(clean);
+  } catch(parseErr){
+    console.error('JSON parse failed, raw text was:', text);
+    if(attempt<3) return generateQuestion(category, difficulty, attempt+1);
+    throw parseErr;
+  }
+
+  if(!parsed.question || !parsed.answer){
+    console.error('missing fields in parsed result', parsed);
+    if(attempt<3) return generateQuestion(category, difficulty, attempt+1);
+    throw new Error('bad json shape');
+  }
+  // normalize
+  parsed.needsImage = !!parsed.needsImage && !!parsed.imageQuery;
+  parsed.needsAudio = !!parsed.needsAudio && !!parsed.audioText;
+  return parsed;
+}
+
+/* ============================ IMAGE FETCH (Openverse, no key needed) ============================ */
+async function fetchCategoryImage(query){
+  try{
+    const url = 'https://api.openverse.org/v1/images/?q='+encodeURIComponent(query)+'&page_size=3&mature=false';
+    const res = await fetch(url);
+    if(!res.ok) return null;
+    const data = await res.json();
+    const results = data && data.results;
+    if(!results || !results.length) return null;
+    const pick = results.find(r=>r.thumbnail || r.url) || results[0];
+    return pick.thumbnail || pick.url || null;
+  } catch(e){
+    console.error('image fetch failed', e);
+    return null;
+  }
+}
+
+function renderQuestionBody(item){
+  document.getElementById('qbody').innerHTML =
+    '<div class="qimg" id="qimg">'+(item.emoji||'❓')+'</div>'+
+    (item.needsAudio ? '<div style="text-align:center;margin-bottom:14px;"><button class="btn btn-ghost" id="playAudioBtn" onclick="playClueAudio()">🔊 تشغيل الصوت</button></div>' : '')+
+    '<div class="qtext" id="qtext">'+item.question+'</div>'+
+    '<div class="atext" id="atext">'+item.answer+'</div>';
+  document.getElementById('toggleAnswerBtn').textContent='عرض الإجابة';
+  document.getElementById('answerCorner').style.visibility='visible';
+  document.getElementById('cornersBar').style.display='flex';
+  Sound.reveal();
+
+  window._currentAudioText = item.needsAudio ? item.audioText : null;
+
+  if(item.imageData){
+    const box = document.getElementById('qimg');
+    box.innerHTML='';
+    box.style.background='transparent';
+    const img = new Image();
+    img.style.maxWidth='100%';
+    img.style.maxHeight='260px';
+    img.style.borderRadius='10px';
+    img.src = item.imageData;
+    box.appendChild(img);
+  } else if(item.needsImage && item.imageQuery){
+    fetchCategoryImage(item.imageQuery).then(url=>{
+      const box = document.getElementById('qimg');
+      if(!box) return; // question closed already
+      if(url){
+        const img = new Image();
+        img.onload = ()=>{ box.innerHTML=''; box.style.background='transparent'; box.appendChild(img); };
+        img.onerror = ()=>{ /* keep emoji fallback */ };
+        img.src = url;
+        img.style.maxWidth='100%';
+        img.style.maxHeight='260px';
+        img.style.borderRadius='10px';
+      }
+    });
+  }
+}
+
+function playClueAudio(){
+  if(!window._currentAudioText) return;
+  try{
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(window._currentAudioText);
+    utter.lang='ar-SA';
+    utter.rate=0.95;
+    const voices = window.speechSynthesis.getVoices();
+    const arVoice = voices.find(v=> v.lang && v.lang.startsWith('ar'));
+    if(arVoice) utter.voice = arVoice;
+    window.speechSynthesis.speak(utter);
+  } catch(e){ console.error('speech failed', e); }
+}
+
+function toggleAnswer(){
+  Sound.click();
+  const q = document.getElementById('qtext');
+  const a = document.getElementById('atext');
+  const btn = document.getElementById('toggleAnswerBtn');
+  if(!q || !a) return;
+  const showing = a.classList.contains('show');
+  if(showing){
+    a.classList.remove('show'); q.classList.remove('hide'); btn.textContent='عرض الإجابة';
+  } else {
+    a.classList.add('show'); q.classList.add('hide'); btn.textContent='رجوع للسؤال';
+  }
+}
+
+function award(team){
+  if(!current) return;
+  const pts = POINTS[current.row];
+  if(team){
+    scores[team]+=pts;
+    document.getElementById('score'+team).textContent = scores[team];
+    Sound.award();
+  } else {
+    Sound.skip();
+  }
+  stateUsed[activeRound][current.ci][current.row] = true;
+  closeQuestion();
+  renderBoard();
+}
+
+function closeQuestion(){
+  document.getElementById('overlay').classList.remove('show');
+  current=null;
+}
+document.getElementById('overlay').addEventListener('click', (e)=>{
+  if(e.target.id==='overlay') closeQuestion();
+});
+
+/* ============================ ADMIN PANEL ============================ */
+let adminReturnScreen = 'screen-setup';
+const ADMIN_PIN = '2014';
+
+function openAdmin(){
+  Sound.select();
+  const entered = prompt('أدخل رمز لوحة الإدارة:');
+  if(entered === null) return; // cancelled
+  if(entered.trim() !== ADMIN_PIN){
+    alert('رمز غير صحيح');
+    return;
+  }
+  const active = document.querySelector('.screen.active');
+  adminReturnScreen = active ? active.id : 'screen-setup';
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-admin').classList.add('active');
+  document.getElementById('ptEasy').value = POINTS[0];
+  document.getElementById('ptMed').value = POINTS[1];
+  document.getElementById('ptHard').value = POINTS[2];
+  renderAdminCategories();
+  populateBankCatSelect();
+  renderBankList();
+}
+function closeAdmin(){
+  document.getElementById('screen-admin').classList.remove('active');
+  const target = document.getElementById(adminReturnScreen) || document.getElementById('screen-setup');
+  target.classList.add('active');
+  // if returning to categories screen, refresh grid in case categories changed
+  if(target.id==='screen-categories') renderCatGrid();
+}
+
+function savePoints(){
+  const e = parseInt(document.getElementById('ptEasy').value)||100;
+  const m = parseInt(document.getElementById('ptMed').value)||250;
+  const h = parseInt(document.getElementById('ptHard').value)||400;
+  POINTS = [e,m,h];
+  saveJSON('mr_points', POINTS);
+  pushToCloud();
+  Sound.award();
+  renderBoard();
+}
+
+function renderAdminCategories(){
+  document.getElementById('catCountLabel').textContent = CATEGORIES.length;
+  const wrap = document.getElementById('catAdminList');
+  wrap.innerHTML='';
+  CATEGORIES.forEach(c=>{
+    const chip=document.createElement('div');
+    chip.className='cat-admin-chip';
+    chip.innerHTML='<span>'+c.ic+' '+c.name+'</span><span class="del" title="حذف">✕</span>';
+    chip.querySelector('.del').onclick=()=>deleteCategory(c.name);
+    wrap.appendChild(chip);
+  });
+}
+function adminAddCategory(){
+  const input = document.getElementById('adminNewCatName');
+  const name = input.value.trim();
+  if(!name) return;
+  if(CATEGORIES.some(c=>c.name===name)){ input.value=''; return; }
+  CATEGORIES.push({name, ic:'✨'});
+  saveJSON('mr_categories', CATEGORIES);
+  pushToCloud();
+  input.value='';
+  renderAdminCategories();
+  populateBankCatSelect();
+}
+function deleteCategory(name){
+  CATEGORIES = CATEGORIES.filter(c=>c.name!==name);
+  selectedCats = selectedCats.filter(c=>c.name!==name);
+  saveJSON('mr_categories', CATEGORIES);
+  pushToCloud();
+  renderAdminCategories();
+  populateBankCatSelect();
+}
+function resetCategoriesToDefault(){
+  if(!confirm('إرجاع القائمة إلى الفئات الافتراضية؟ (لن يحذف بنك الأسئلة)')) return;
+  CATEGORIES = DEFAULT_CATEGORIES.slice();
+  saveJSON('mr_categories', CATEGORIES);
+  pushToCloud();
+  renderAdminCategories();
+  populateBankCatSelect();
+}
+
+/* ---- question bank management ---- */
+function populateBankCatSelect(){
+  const sel = document.getElementById('bankCatSelect');
+  const current = sel.value;
+  sel.innerHTML='';
+  CATEGORIES.forEach(c=>{
+    const opt=document.createElement('option');
+    opt.value=c.name; opt.textContent=c.ic+' '+c.name;
+    sel.appendChild(opt);
+  });
+  if(current && CATEGORIES.some(c=>c.name===current)) sel.value = current;
+  sel.onchange = renderBankList;
+  document.getElementById('bankDiffSelect').onchange = renderBankList;
+}
+let uploadedImageData = null;
+function handleImageUpload(evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  if(file.size > 3*1024*1024){
+    alert('حجم الصورة كبير جداً، اختر صورة أقل من 3 ميجا');
+    evt.target.value='';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    uploadedImageData = reader.result; // base64 data URL
+    const preview = document.getElementById('newQImagePreview');
+    preview.src = uploadedImageData;
+    preview.style.display='inline-block';
+    document.getElementById('newQImageName').textContent = file.name;
+    document.getElementById('clearImageBtn').style.display='inline-block';
+  };
+  reader.readAsDataURL(file);
+}
+function clearImageUpload(){
+  uploadedImageData = null;
+  document.getElementById('newQImageFile').value='';
+  document.getElementById('newQImagePreview').style.display='none';
+  document.getElementById('newQImageName').textContent='';
+  document.getElementById('clearImageBtn').style.display='none';
+}
+
+function addBankQuestion(){
+  const cat = document.getElementById('bankCatSelect').value;
+  const diffKey = document.getElementById('bankDiffSelect').value;
+  const q = document.getElementById('newQText').value.trim();
+  const a = document.getElementById('newQAnswer').value.trim();
+  const emoji = document.getElementById('newQEmoji').value.trim();
+  const imgQuery = document.getElementById('newQImgQuery').value.trim();
+  const audioText = document.getElementById('newQAudio').value.trim();
+  if(!cat || !q || !a){ alert('لازم تكتب نص السؤال والإجابة على الأقل'); return; }
+
+  QBANK[cat] = QBANK[cat] || {easy:[], medium:[], hard:[]};
+  QBANK[cat][diffKey].push({
+    question:q, answer:a, emoji: emoji || '❓',
+    needsImage: !!imgQuery && !uploadedImageData, imageQuery: imgQuery,
+    imageData: uploadedImageData || '',
+    needsAudio: !!audioText, audioText: audioText
+  });
+  saveJSON('mr_bank', QBANK);
+  pushToCloud();
+  ['newQText','newQAnswer','newQEmoji','newQImgQuery','newQAudio'].forEach(id=>document.getElementById(id).value='');
+  clearImageUpload();
+  Sound.award();
+  renderBankList();
+}
+function deleteBankQuestion(cat, diffKey, idx){
+  if(!QBANK[cat] || !QBANK[cat][diffKey]) return;
+  QBANK[cat][diffKey].splice(idx,1);
+  saveJSON('mr_bank', QBANK);
+  pushToCloud();
+  renderBankList();
+}
+function renderBankList(){
+  const cat = document.getElementById('bankCatSelect').value;
+  const diffKey = document.getElementById('bankDiffSelect').value;
+  const list = (QBANK[cat] && QBANK[cat][diffKey]) || [];
+  const wrap = document.getElementById('bankList');
+  wrap.innerHTML='';
+  list.forEach((item, idx)=>{
+    const row=document.createElement('div');
+    row.className='bank-item';
+    row.innerHTML =
+      (item.imageData ? '<img src="'+item.imageData+'" style="width:44px;height:44px;object-fit:cover;border-radius:8px;flex-shrink:0;">' : '')+
+      '<div><div class="bq">'+(item.emoji||'❓')+' '+item.question+'</div>'+
+      '<div class="ba">الإجابة: '+item.answer+'</div></div>'+
+      '<button class="del-q" title="حذف">✕</button>';
+    row.querySelector('.del-q').onclick=()=>deleteBankQuestion(cat, diffKey, idx);
+    wrap.appendChild(row);
+  });
+  let total = 0;
+  Object.values(QBANK).forEach(c=>{ ['easy','medium','hard'].forEach(k=>{ total += (c[k]||[]).length; }); });
+  document.getElementById('bankCount').textContent =
+    'أسئلة هذه الفئة/المستوى: '+list.length+' — إجمالي كل البنك: '+total+' سؤال';
+  const totalLabel = document.getElementById('totalBankCount');
+  if(totalLabel) totalLabel.textContent = total;
+}
+
+function exportBank(){
+  const blob = new Blob([JSON.stringify(QBANK, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'mukhmukh_raja_bank.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function importBank(evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const incoming = JSON.parse(reader.result);
+      // merge: incoming[cat][diff] = [...] gets appended to existing bank
+      Object.keys(incoming).forEach(cat=>{
+        QBANK[cat] = QBANK[cat] || {easy:[], medium:[], hard:[]};
+        ['easy','medium','hard'].forEach(k=>{
+          if(Array.isArray(incoming[cat][k])){
+            QBANK[cat][k] = QBANK[cat][k].concat(incoming[cat][k]);
+          }
+        });
+        if(!CATEGORIES.some(c=>c.name===cat)){
+          CATEGORIES.push({name:cat, ic:'✨'});
+        }
+      });
+      saveJSON('mr_bank', QBANK);
+      saveJSON('mr_categories', CATEGORIES);
+      pushToCloud();
+      renderAdminCategories();
+      populateBankCatSelect();
+      renderBankList();
+      alert('تم استيراد الأسئلة بنجاح');
+    } catch(e){
+      alert('ملف JSON غير صالح');
+      console.error(e);
+    }
+  };
+  reader.readAsText(file);
+  evt.target.value = '';
+}
+
+/* ============================ CLOUD SYNC BOOTSTRAP ============================ */
+setSyncStatus(CLOUD_SYNC_ENABLED ? 'syncing' : 'offline');
+if(CLOUD_SYNC_ENABLED){
+  pullFromCloudOnce().then(()=> listenToCloud());
+}
+</script>
+</body>
+</html>

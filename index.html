@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مخمخ رجا - لعبة أسئلة جماعية</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800;900&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+<div class="sadu"></div>
+<header>
+  <button class="admin-gear" id="adminGearBtn" onclick="openAdmin()" title="لوحة الإدارة">⚙️</button>
+  <span id="syncStatus" class="sync-indicator">📴 وضع محلي</span>
+  <h1 class="brand">مخمخ <span>رجا</span></h1>
+  <div class="tag">لعبة أسئلة وأجوبة جماعية ذكية</div>
+</header>
+<div class="sadu-strip"></div>
+
+<!-- الشاشة الرئيسية -->
+<div class="screen active" id="screen-home">
+  <div class="home-container">
+    <div class="hero-section">
+      <h2 class="hero-title">مرحباً بك في مخمخ رجا 🎮</h2>
+      <p class="hero-subtitle">لعبة أسئلة ذكية للعائلة والأصدقاء</p>
+    </div>
+
+    <div class="home-buttons">
+      <button class="btn-main btn-primary" onclick="goToSetup()">
+        <span class="btn-icon">🎯</span>
+        <span>لعبة جديدة</span>
+      </button>
+      <button class="btn-main btn-secondary" onclick="showAbout()">
+        <span class="btn-icon">ℹ️</span>
+        <span>عن اللعبة</span>
+      </button>
+    </div>
+
+    <div class="home-stats">
+      <div class="stat-card">
+        <div class="stat-icon">📚</div>
+        <div class="stat-info">
+          <div class="stat-label">أسئلة متاحة</div>
+          <div class="stat-value" id="totalQuestions">--</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📂</div>
+        <div class="stat-info">
+          <div class="stat-label">فئات</div>
+          <div class="stat-value" id="totalCategories">35</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">👥</div>
+        <div class="stat-info">
+          <div class="stat-label">فرق</div>
+          <div class="stat-value">2-10</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- شاشة الإعداد -->
+<div class="screen" id="screen-setup">
+  <div class="step-title">حدد معلومات الفرق</div>
+  <div class="step-sub">اكتب اسم كل فريق واختر 3 وسائل مساعدة</div>
+  <div class="setup-container">
+    <div class="setup-row" id="teamsSetupContainer"></div>
+  </div>
+  <div class="nav-buttons">
+    <button class="btn-main btn-ghost" onclick="goToHome()">← رجوع</button>
+    <button class="btn-main btn-primary" onclick="goToCategories()" id="nextSetupBtn">التالي →</button>
+  </div>
+</div>
+
+<!-- شاشة اختيار الفئات -->
+<div class="screen" id="screen-categories">
+  <div class="step-title">اختر فئات الجولة</div>
+  <div class="step-sub">كل 6 فئات تكوّن جولة. اختر أي عدد</div>
+  <div class="cat-toolbar" id="customCatToolbar" style="display:none;">
+    <input type="text" class="custom-cat-input" id="customCatName" placeholder="اسم فئة مخصصة...">
+    <button class="add-cat-btn" onclick="addCustomCategory()">+ إضافة فئة</button>
+  </div>
+  <div class="cat-grid" id="catGrid"></div>
+  <div class="selection-status" id="selStatus"></div>
+  <div class="nav-buttons">
+    <button class="btn-main btn-ghost" onclick="goToSetup()">← رجوع</button>
+    <button class="btn-main btn-primary" id="startBtn" onclick="startGame()" disabled>ابدأ اللعبة 🎮</button>
+  </div>
+</div>
+
+<!-- شاشة اللعبة -->
+<div class="screen" id="screen-game">
+  <div class="game-header">
+    <div class="scoreboard" id="scoreboard"></div>
+    <button class="reset-btn" onclick="backToSetupConfirm()">↺ لعبة جديدة</button>
+  </div>
+
+  <div class="round-tabs" id="roundTabs"></div>
+  <div class="board-wrap"><div class="board" id="board"></div></div>
+</div>
+
+<!-- لوحة التحكم -->
+<div class="screen" id="screen-admin">
+  <div class="admin-header">
+    <div class="step-title">⚙️ لوحة الإدارة</div>
+    <button class="btn-close" onclick="closeAdmin()" title="إغلاق">✕</button>
+  </div>
+
+  <div class="admin-tabs">
+    <button class="admin-tab active" onclick="switchAdminTab('questions')">📚 الأسئلة</button>
+    <button class="admin-tab" onclick="switchAdminTab('categories')">📂 الفئات</button>
+    <button class="admin-tab" onclick="switchAdminTab('points')">🏆 النقاط</button>
+    <button class="admin-tab" onclick="switchAdminTab('sync')">☁️ المزامنة</button>
+  </div>
+
+  <div class="admin-content">
+    <!-- تبويب الأسئلة -->
+    <div class="admin-section active" id="tab-questions">
+      <h3>إدارة بنك الأسئلة</h3>
+      <div class="bank-controls">
+        <select id="bankCatSelect"></select>
+        <select id="bankDiffSelect">
+          <option value="easy">سهل (100)</option>
+          <option value="medium">متوسط (250)</option>
+          <option value="hard">صعب (400)</option>
+        </select>
+      </div>
+      <div class="admin-row" style="flex-direction:column; align-items:stretch;">
+        <input type="text" id="newQText" placeholder="نص السؤال">
+        <input type="text" id="newQAnswer" placeholder="الإجابة الصحيحة">
+        <input type="text" id="newQEmoji" placeholder="إيموجي (اختياري)">
+        <button class="btn btn-answer" onclick="addBankQuestion()">+ إضافة سؤال</button>
+      </div>
+      <div class="bank-list" id="bankList"></div>
+      <div class="bank-count" id="bankCount"></div>
+    </div>
+
+    <!-- تبويب الفئات -->
+    <div class="admin-section" id="tab-categories">
+      <h3>الفئات المتاحة</h3>
+      <div class="admin-row">
+        <input type="text" id="adminNewCatName" placeholder="اسم فئة جديدة">
+        <button class="btn btn-answer" onclick="adminAddCategory()">+ إضافة فئة</button>
+      </div>
+      <div class="cat-admin-list" id="catAdminList"></div>
+    </div>
+
+    <!-- تبويب النقاط -->
+    <div class="admin-section" id="tab-points">
+      <h3>نقاط الأسئلة</h3>
+      <div class="points-inputs">
+        <label>سهل</label><input type="number" id="ptEasy" value="100">
+        <label>متوسط</label><input type="number" id="ptMed" value="250">
+        <label>صعب</label><input type="number" id="ptHard" value="400">
+        <button class="btn btn-answer" onclick="savePoints()">حفظ النقاط</button>
+      </div>
+    </div>
+
+    <!-- تبويب المزامنة -->
+    <div class="admin-section" id="tab-sync">
+      <h3>حالة المزامنة السحابية</h3>
+      <div id="syncInfo" style="padding: 20px; background: rgba(0,0,0,.2); border-radius: 10px;">
+        <p>جاري التحميل...</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-buttons">
+    <button class="btn-main btn-ghost" onclick="closeAdmin()">← رجوع للعبة</button>
+  </div>
+</div>
+
+<!-- نافذة الأسئلة -->
+<div class="overlay" id="overlay">
+  <div class="qcard">
+    <button class="btn-close" onclick="closeQuestion()">✕</button>
+    <div class="topline">
+      <div class="qcat" id="qcat"></div>
+      <div class="qpoints" id="qpoints"></div>
+    </div>
+    <div id="qbody">
+      <div class="qimg" id="qimg"></div>
+      <div class="qtext" id="qtext"></div>
+      <div class="atext" id="atext"></div>
+    </div>
+    <div class="corners" id="cornersBar">
+      <div class="corner">
+        <span class="corner-label">الإجابة</span>
+        <button class="btn btn-answer" id="toggleAnswerBtn" onclick="toggleAnswer()">عرض الإجابة</button>
+      </div>
+      <div class="corner">
+        <span class="corner-label">إعطاء النقاط</span>
+        <div id="awardButtons"></div>
+        <button class="btn btn-skip" onclick="award(null)">بدون نقاط</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p>لعبة مخمخ رجا - نسخة احترافية متزامنة سحابياً 🚀</p>
+  <p style="font-size: 12px; margin-top: 8px;">بنك الأسئلة: <span id="footerStats">--</span> سؤال</p>
+</footer>
+
+<!-- مكتبات Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- ملفات JS الرئيسية -->
+<script src="js/supabase-config.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/game.js"></script>
+<script src="js/admin.js"></script>
+<script src="js/sync.js"></script>
+
+</body>
+</html>
