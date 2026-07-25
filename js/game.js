@@ -30,6 +30,16 @@ let CATEGORIES = loadJSON('mr_categories', DEFAULT_CATEGORIES.slice());
 let POINTS = loadJSON('mr_points', [100, 250, 400]);
 let QBANK = loadJSON('mr_bank', {});
 
+// يعالج حالات محفوظة سابقاً بمتصفحات تأثرت بباق مزامنة قديم كتب مصفوفات/كائنات فارغة فوق البيانات الافتراضية
+if (!Array.isArray(CATEGORIES) || CATEGORIES.length === 0) {
+  CATEGORIES = DEFAULT_CATEGORIES.slice();
+  saveJSON('mr_categories', CATEGORIES);
+}
+if (!Array.isArray(POINTS) || POINTS.length === 0) {
+  POINTS = [100, 250, 400];
+  saveJSON('mr_points', POINTS);
+}
+
 let teamSetup = {
   A: { name: 'الفريق الأول', lifelines: [] },
   B: { name: 'الفريق الثاني', lifelines: [] }
