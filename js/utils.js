@@ -248,11 +248,11 @@ function createElement(tag, attrs = {}, content = '') {
       el.setAttribute(key, attrs[key]);
     }
   });
-  if (content) {
-    if (typeof content === 'string') {
-      el.innerHTML = content;
-    } else {
+  if (content !== '' && content !== null && content !== undefined) {
+    if (content instanceof Node) {
       el.appendChild(content);
+    } else {
+      el.innerHTML = content;
     }
   }
   return el;
