@@ -179,33 +179,46 @@ function createChatPanel() {
       <div class="chat-messages" id="roomChatMessages"></div>
       <div class="chat-input-area">
         <input type="text" id="chatInput" class="chat-input" placeholder="Enter للإرسال...">
-        <button class="chat-send-btn" disabled>إرسال</button>
+        <button class="chat-send-btn" id="chatSendBtn">إرسال</button>
       </div>
     `);
 
     document.body.appendChild(panel);
 
-    // الاستماع فقط لـ Enter (بدون click من الأجهزة الأخرى)
+    // الاستماع للـ Enter و click button
     const chatInput = document.getElementById('chatInput');
+    const chatSendBtn = document.getElementById('chatSendBtn');
+
+    const sendMsg = () => {
+      const msg = chatInput.value;
+      if (msg.trim()) {
+        sendChatMessage(msg);
+        chatInput.value = '';
+      }
+    };
 
     if (chatInput) {
+      // Enter للإرسال
       chatInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
-          const msg = chatInput.value;
-          if (msg.trim()) {
-            sendChatMessage(msg);
-          }
+          sendMsg();
         }
       });
 
-      // تحديث حالة الزر عند الكتابة (للعرض فقط)
+      // تحديث حالة الزر عند الكتابة
       chatInput.addEventListener('input', (e) => {
-        const btn = document.querySelector('.chat-send-btn');
+        const btn = document.getElementById('chatSendBtn');
         if (btn) {
-          btn.disabled = !e.target.value.trim();
+          btn.style.opacity = e.target.value.trim() ? '1' : '0.5';
+          btn.style.cursor = e.target.value.trim() ? 'pointer' : 'not-allowed';
         }
       });
+    }
+
+    // الزر يرسل أيضاً
+    if (chatSendBtn) {
+      chatSendBtn.addEventListener('click', sendMsg);
     }
 
     loadChatMessages();

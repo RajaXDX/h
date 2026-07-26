@@ -250,6 +250,17 @@ function startGame() {
   lifelineUsed = { A: [], B: [] };
   activeRound = 0;
 
+  // إذا لم تكن في مود أونلاين، استخدم teamSetup. إذا كان في أونلاين، استخدم roomPlayers
+  if (currentRoom) {
+    // مود أونلاين - استخدم أسماء الفريق من Supabase
+    const teamA = roomPlayers.filter(p => p.team === 'A');
+    const teamB = roomPlayers.filter(p => p.team === 'B');
+    if (teamA.length === 0 || teamB.length === 0) {
+      alert('❌ لم يتم توزيع اللاعبين بشكل صحيح');
+      return;
+    }
+  }
+
   updateGameUI();
   showScreen('screen-game');
   renderTabs();
@@ -262,8 +273,20 @@ function updateGameUI() {
   const scoreA = document.getElementById('scoreA');
   const scoreB = document.getElementById('scoreB');
 
-  if (nameA) nameA.textContent = `🟢 ${teamSetup.A.name}`;
-  if (nameB) nameB.textContent = `🟡 ${teamSetup.B.name}`;
+  // الحصول على أسماء الفريق من teamSetup أو من roomPlayers
+  let teamAName = teamSetup.A?.name || 'الفريق A';
+  let teamBName = teamSetup.B?.name || 'الفريق B';
+
+  if (currentRoom && roomPlayers.length > 0) {
+    // في مود أونلاين، استخدم أسماء اللاعبين من كل فريق
+    const teamA = roomPlayers.filter(p => p.team === 'A');
+    const teamB = roomPlayers.filter(p => p.team === 'B');
+    teamAName = teamA.map(p => p.player_name).join(' + ') || 'الفريق A';
+    teamBName = teamB.map(p => p.player_name).join(' + ') || 'الفريق B';
+  }
+
+  if (nameA) nameA.textContent = `🟢 ${teamAName}`;
+  if (nameB) nameB.textContent = `🟡 ${teamBName}`;
   if (scoreA) scoreA.textContent = scores.A;
   if (scoreB) scoreB.textContent = scores.B;
 
@@ -712,14 +735,9 @@ async function startGameOnline() {
     return;
   }
 
-  // تحديث حالة الروم
-  await supa
-    .from('game_rooms')
-    .update({ status: 'active' })
-    .eq('id', currentRoom.id);
-
-  // الذهاب لشاشة اللعبة
+  // الذهاب لشاشة اختيار الفئات بدل الذهاب مباشرة للعبة
   Sound.click();
-  showScreen('screen-game');
-  renderBoard();
+  selectedCats = []; // مسح الفئات السابقة
+  showScreen('screen-categories');
+  renderCatGrid();
 }
