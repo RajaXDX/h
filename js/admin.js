@@ -488,3 +488,40 @@ function formatBytes(bytes) {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
+
+/* ============================= CLEANUP ROOMS ============================= */
+
+async function cleanupOldRooms() {
+  if (!supa) {
+    alert('❌ Supabase غير متصل');
+    return;
+  }
+
+  if (!confirm('🗑️ حذف جميع الرومات القديمة من السحابة؟ (هذا لا يمكن التراجع عنه)')) {
+    return;
+  }
+
+  try {
+    // حذف جميع الرومات
+    const { error: roomsError } = await supa.from('game_rooms').delete().gt('id', '0');
+    if (roomsError) throw roomsError;
+
+    // حذف جميع لاعبي الرومات
+    const { error: playersError } = await supa.from('room_players').delete().gt('id', '0');
+    if (playersError) throw playersError;
+
+    // حذف جميع رسائل الشات
+    const { error: chatError } = await supa.from('room_chat').delete().gt('id', '0');
+    if (chatError) throw chatError;
+
+    // حذف حالات اللعبة
+    const { error: stateError } = await supa.from('room_game_state').delete().gt('id', '0');
+    if (stateError) throw stateError;
+
+    alert('✅ تم حذف جميع الرومات والبيانات المتعلقة بها');
+    log('🗑️ تم تنظيف الرومات القديمة', 'success');
+  } catch (error) {
+    console.error('Cleanup error:', error);
+    alert(`❌ خطأ: ${error.message}`);
+  }
+}
