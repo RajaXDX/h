@@ -178,22 +178,35 @@ function createChatPanel() {
       </div>
       <div class="chat-messages" id="roomChatMessages"></div>
       <div class="chat-input-area">
-        <input type="text" id="chatInput" class="chat-input" placeholder="اكتب رسالة...">
-        <button class="chat-send-btn" onclick="() => {
-          const input = document.getElementById('chatInput');
-          sendChatMessage(input.value);
-        }">إرسال</button>
+        <input type="text" id="chatInput" class="chat-input" placeholder="Enter للإرسال...">
+        <button class="chat-send-btn" disabled>إرسال</button>
       </div>
     `);
 
     document.body.appendChild(panel);
 
-    // الاستماع لـ Enter
-    document.getElementById('chatInput').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        sendChatMessage(e.target.value);
-      }
-    });
+    // الاستماع فقط لـ Enter (بدون click من الأجهزة الأخرى)
+    const chatInput = document.getElementById('chatInput');
+
+    if (chatInput) {
+      chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          const msg = chatInput.value;
+          if (msg.trim()) {
+            sendChatMessage(msg);
+          }
+        }
+      });
+
+      // تحديث حالة الزر عند الكتابة (للعرض فقط)
+      chatInput.addEventListener('input', (e) => {
+        const btn = document.querySelector('.chat-send-btn');
+        if (btn) {
+          btn.disabled = !e.target.value.trim();
+        }
+      });
+    }
 
     loadChatMessages();
   }

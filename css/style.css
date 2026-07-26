@@ -1327,6 +1327,33 @@ footer p {
   text-align: right;
 }
 
+.team-buttons {
+  display: flex;
+  gap: 8px;
+  margin: 0 10px;
+}
+
+.team-btn {
+  padding: 6px 12px;
+  background: rgba(212, 175, 55, 0.2);
+  border: 1px solid var(--gold);
+  border-radius: 4px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.team-btn:hover {
+  background: rgba(212, 175, 55, 0.4);
+}
+
+.team-btn.selected {
+  background: var(--gold);
+  color: var(--bg);
+  font-weight: bold;
+}
+
 /* ============================= CHAT ============================= */
 
 .chat-panel {
@@ -1501,7 +1528,7 @@ footer p {
 
 /* ============================= RESPONSIVE ============================= */
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .mode-buttons {
     grid-template-columns: 1fr;
   }
@@ -1512,9 +1539,11 @@ footer p {
   }
 
   .chat-panel {
-    width: calc(100% - 40px);
-    right: 20px;
-    left: 20px;
+    width: calc(100% - 20px);
+    right: 10px;
+    left: 10px;
+    height: 300px;
+    bottom: 10px;
   }
 
   .room-code-join {
@@ -1523,5 +1552,54 @@ footer p {
 
   .room-code-join input {
     width: 100%;
+  }
+
+  .room-players-list {
+    max-height: 400px;
+  }
+
+  .player-item {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .team-buttons {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .team-btn {
+    flex: 1;
+    min-width: 60px;
+  }
+
+  .room-code-display,
+  .room-mode-display {
+    flex: 1;
+  }
+
+  .rooms-controls {
+    flex-direction: column;
+  }
+
+  .room-code-join {
+    width: 100%;
+  }
+
+  .chat-input-area {
+    flex-direction: column;
+  }
+
+  .chat-input {
+    width: 100%;
+  }
+
+  .chat-send-btn {
+    width: 100%;
+  }
+
+  .chat-messages {
+    max-height: 200px;
   }
 }

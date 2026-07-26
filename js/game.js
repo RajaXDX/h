@@ -611,43 +611,20 @@ function goToRooms() {
 }
 
 async function loadAvailableRooms() {
-  if (!supa) {
-    alert('❌ قاعدة البيانات غير متصلة');
-    return;
-  }
+  const roomsList = document.getElementById('roomsList');
+  if (!roomsList) return;
 
-  try {
-    const { data, error } = await supa
-      .from('game_rooms')
-      .select('*')
-      .eq('status', 'waiting')
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    if (error) throw error;
-
-    const roomsList = document.getElementById('roomsList');
-    if (!roomsList) return;
-
-    if (!data || data.length === 0) {
-      roomsList.innerHTML = '<p style="text-align: center; color: #999;">لا توجد رومات متاحة حالياً</p>';
-      return;
-    }
-
-    roomsList.innerHTML = '';
-    data.forEach(room => {
-      const roomEl = createElement('div', { class: 'room-card' }, `
-        <div class="room-name">${room.name}</div>
-        <div class="room-code">الكود: <strong>${room.code}</strong></div>
-        <div class="room-mode">${room.mode === 'online' ? '🌐 أونلاين' : '💻 محلي'}</div>
-        <button class="btn btn-primary" onclick="selectRoomToJoin('${room.code}')">الدخول</button>
-      `);
-      roomsList.appendChild(roomEl);
-    });
-  } catch (error) {
-    console.error('Load rooms error:', error);
-    alert('❌ خطأ في تحميل الرومات');
-  }
+  // لا نعرض الرومات المتاحة للحفاظ على الخصوصية
+  // بدل ذلك، نطلب من اللاعب إدخال الكود مباشرة
+  roomsList.innerHTML = `
+    <div style="text-align: center; padding: 20px; color: #999;">
+      <p style="margin-bottom: 15px;">🔒 لا توجد رومات عامة</p>
+      <p style="font-size: 12px; line-height: 1.6;">
+        اطلب من صاحب الروم أن يعطيك الكود<br>
+        ثم ادخله في الحقل أعلاه
+      </p>
+    </div>
+  `;
 }
 
 function selectRoomToJoin(roomCode) {

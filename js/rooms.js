@@ -388,18 +388,48 @@ function updateGameDisplay() {
 }
 
 function updatePlayersList() {
-  const playersList = document.getElementById('roomPlayersList');
-  if (!playersList) return;
+  if (!currentPlayer?.is_host) {
+    // العرض العادي للاعبين (بدون توزيع)
+    const playersList = document.getElementById('playersReadyUI');
+    if (!playersList) return;
 
-  playersList.innerHTML = '';
-  roomPlayers.forEach(player => {
-    const playerDiv = createElement('div', { class: 'player-item' }, `
-      <span class="player-name">${player.player_name}</span>
-      <span class="player-team">${player.team ? `فريق ${player.team}` : 'بدون فريق'}</span>
-      <span class="player-score">${player.score}</span>
-    `);
-    playersList.appendChild(playerDiv);
-  });
+    const listDiv = document.getElementById('roomPlayersList2');
+    if (listDiv) {
+      listDiv.innerHTML = '';
+      roomPlayers.forEach(player => {
+        const playerDiv = createElement('div', { class: 'player-item' }, `
+          <span class="player-name">${player.player_name}</span>
+          <span class="player-team">${player.team ? `فريق ${player.team}` : '⏳ بانتظار التوزيع'}</span>
+          <span class="player-score">${player.score}</span>
+        `);
+        listDiv.appendChild(playerDiv);
+      });
+    }
+    document.getElementById('playersReadyUI').style.display = 'block';
+    document.getElementById('teamDistributionUI').style.display = 'none';
+  } else {
+    // واجهة التوزيع للـ Host فقط
+    const distUI = document.getElementById('teamDistributionUI');
+    if (distUI) distUI.style.display = 'block';
+    document.getElementById('playersReadyUI').style.display = 'none';
+
+    const playersList = document.getElementById('roomPlayersList');
+    if (playersList) {
+      playersList.innerHTML = '';
+      roomPlayers.forEach(player => {
+        const playerDiv = createElement('div', { class: 'player-item' }, `
+          <span class="player-name">${player.player_name}</span>
+          <div class="team-buttons">
+            <button class="team-btn ${player.team === 'A' ? 'selected' : ''}"
+              onclick="assignPlayerToTeam('${player.player_id}', 'A')">فريق أ</button>
+            <button class="team-btn ${player.team === 'B' ? 'selected' : ''}"
+              onclick="assignPlayerToTeam('${player.player_id}', 'B')">فريق ب</button>
+          </div>
+        `);
+        playersList.appendChild(playerDiv);
+      });
+    }
+  }
 }
 
 function displayChatMessage(message) {
