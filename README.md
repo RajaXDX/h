@@ -1,4 +1,4 @@
-# 🎮 مخمخ رجا - لعبة أسئلة جماعية ذكية
+# 🎮 تحدي رجا - لعبة أسئلة جماعية ذكية
 
 لعبة أسئلة وأجوبة تفاعلية للعائلة والأصدقاء، مع بنك أسئلة متزامن سحابياً وإدارة احترافية.
 
@@ -22,8 +22,8 @@
 
 1. **انسخ المشروع**
    ```bash
-   git clone https://github.com/yourusername/mokhamakh-raj.git
-   cd mokhamakh-raj
+   git clone https://github.com/yourusername/challenge-raj.git
+   cd challenge-raj
    ```
 
 2. **افتح الموقع**
@@ -94,7 +94,7 @@
 ## 📁 هيكل المشروع
 
 ```
-mokhamakh-raj/
+challenge-raj/
 ├── index.html           # الصفحة الرئيسية
 ├── css/
 │   ├── style.css       # التنسيقات الأساسية
@@ -142,7 +142,7 @@ const ADMIN_PIN = '2014'; // غيّر إلى رقم آخر
 3. **فعّل GitHub Pages**
    - اذهب إلى Settings > Pages
    - اختر `main` branch
-   - الموقع سيكون: `https://yourusername.github.io/mokhamakh-raj`
+   - الموقع سيكون: `https://yourusername.github.io/challenge-raj`
 
 ## 🐛 استكشاف الأخطاء
 
@@ -173,7 +173,7 @@ const ADMIN_PIN = '2014'; // غيّر إلى رقم آخر
 
 ## 🙏 شكر وتقدير
 
-شكر خاص لفريق مخمخ رجا على إنشاء هذه اللعبة الرائعة!
+شكر خاص لفريق تحدي رجا على إنشاء هذه اللعبة الرائعة!
 
 ---
 

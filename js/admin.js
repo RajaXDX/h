@@ -398,3 +398,93 @@ function syncNow() {
     updateSyncInfo();
   });
 }
+
+/* ============================= IMAGE IMPORT ============================= */
+
+function importImages() {
+  if (!isAdminLoggedIn) {
+    alert('❌ يجب تسجيل الدخول كإدمن أولاً');
+    return;
+  }
+
+  const fileInput = document.getElementById('imageImportInput');
+  const files = fileInput.files;
+
+  if (files.length === 0) {
+    alert('❌ اختر صوراً من الجهاز أولاً');
+    return;
+  }
+
+  const statusDiv = document.getElementById('imageImportStatus');
+  statusDiv.textContent = '⏳ جاري معالجة الصور...';
+
+  let processed = 0;
+  let images = loadJSON('mr_images', {});
+
+  Array.from(files).forEach((file, idx) => {
+    if (!file.type.startsWith('image/')) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target.result;
+      const fileName = file.name;
+      const timestamp = Date.now();
+      const imageKey = `img_${timestamp}_${idx}`;
+
+      images[imageKey] = {
+        name: fileName,
+        data: base64,
+        size: file.size,
+        type: file.type,
+        uploadDate: new Date().toISOString()
+      };
+
+      processed++;
+      statusDiv.textContent = `⏳ تم معالجة ${processed}/${files.length} صورة...`;
+
+      if (processed === files.length) {
+        saveJSON('mr_images', images);
+        pushToCloud();
+        statusDiv.textContent = `✅ تم استيراد ${processed} صورة بنجاح!`;
+        fileInput.value = '';
+        Sound.award();
+        log(`✅ تم استيراد ${processed} صورة`, 'success');
+
+        setTimeout(() => {
+          statusDiv.textContent = '';
+          showImageLibrary(images);
+        }, 1500);
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function showImageLibrary(images) {
+  const imageCount = Object.keys(images).length;
+  const msg = `
+📸 مكتبة الصور
+━━━━━━━━━━━━
+إجمالي الصور: ${imageCount}
+
+الصور المحفوظة:
+${Object.entries(images).slice(-5).map(([key, img]) =>
+  `• ${img.name} (${formatBytes(img.size)})`
+).join('\n')}
+
+${imageCount > 5 ? `... و ${imageCount - 5} صور أخرى` : ''}
+
+يمكنك الآن استخدام أسماء الصور في الأسئلة!
+  `;
+  alert(msg);
+}
+
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}

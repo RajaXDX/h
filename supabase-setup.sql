@@ -93,6 +93,10 @@ ALTER TABLE game_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE game_rounds ENABLE ROW LEVEL SECURITY;
 ALTER TABLE team_statistics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admin_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE game_rooms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE room_players ENABLE ROW LEVEL SECURITY;
+ALTER TABLE room_chat ENABLE ROW LEVEL SECURITY;
+ALTER TABLE room_game_state ENABLE ROW LEVEL SECURITY;
 
 -- إنشاء سياسات للوصول العام (القراءة والكتابة مفتوحة للجميع مؤقتاً)
 -- ⚠️ نصيحة أمنية: يجب تحديد هذه السياسات لاحقاً بناءً على متطلبات الأمان
@@ -144,12 +148,129 @@ CREATE POLICY "allow_public_read_logs" ON admin_logs
 CREATE POLICY "allow_public_insert_logs" ON admin_logs
   FOR INSERT WITH CHECK (true);
 
+-- game_rooms - السماح بالقراءة والكتابة للجميع
+CREATE POLICY "allow_public_read_rooms" ON game_rooms
+  FOR SELECT USING (true);
+
+CREATE POLICY "allow_public_insert_rooms" ON game_rooms
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "allow_public_update_rooms" ON game_rooms
+  FOR UPDATE USING (true);
+
+-- room_players - السماح بالقراءة والكتابة للجميع
+CREATE POLICY "allow_public_read_players" ON room_players
+  FOR SELECT USING (true);
+
+CREATE POLICY "allow_public_insert_players" ON room_players
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "allow_public_update_players" ON room_players
+  FOR UPDATE USING (true);
+
+-- room_chat - السماح بالقراءة والكتابة للجميع
+CREATE POLICY "allow_public_read_chat" ON room_chat
+  FOR SELECT USING (true);
+
+CREATE POLICY "allow_public_insert_chat" ON room_chat
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "allow_public_update_chat" ON room_chat
+  FOR UPDATE USING (true);
+
+-- room_game_state - السماح بالقراءة والكتابة للجميع
+CREATE POLICY "allow_public_read_state" ON room_game_state
+  FOR SELECT USING (true);
+
+CREATE POLICY "allow_public_insert_state" ON room_game_state
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "allow_public_update_state" ON room_game_state
+  FOR UPDATE USING (true);
+
+-- ============================= 6. GAME ROOMS TABLE ============================= --
+-- غرف اللعب متعددة اللاعبين
+
+CREATE TABLE IF NOT EXISTS game_rooms (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  code TEXT NOT NULL UNIQUE, -- رمز قصير (4-6 أحرف) للدخول
+  name TEXT NOT NULL,
+  mode TEXT DEFAULT 'online', -- online, local
+  status TEXT DEFAULT 'waiting', -- waiting, active, completed, archived
+  host_player_id TEXT NOT NULL,
+  categories_selected JSONB DEFAULT '[]',
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_game_rooms_code ON game_rooms(code);
+CREATE INDEX IF NOT EXISTS idx_game_rooms_status ON game_rooms(status);
+CREATE INDEX IF NOT EXISTS idx_game_rooms_created ON game_rooms(created_at DESC);
+
+-- ============================= 7. ROOM PLAYERS TABLE ============================= --
+-- اللاعبون في كل غرفة
+
+CREATE TABLE IF NOT EXISTS room_players (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  room_id TEXT NOT NULL REFERENCES game_rooms(id) ON DELETE CASCADE,
+  player_id TEXT NOT NULL, -- معرف فريد محلي للاعب
+  player_name TEXT NOT NULL,
+  device_id TEXT,
+  team TEXT, -- A أو B - يتم تعيينه من قبل Host
+  score INTEGER DEFAULT 0,
+  is_host BOOLEAN DEFAULT false,
+  status TEXT DEFAULT 'active', -- active, inactive, left
+  joined_at TIMESTAMPTZ DEFAULT now(),
+  left_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_room_players_room ON room_players(room_id);
+CREATE INDEX IF NOT EXISTS idx_room_players_player ON room_players(player_id);
+CREATE INDEX IF NOT EXISTS idx_room_players_team ON room_players(room_id, team);
+
+-- ============================= 8. ROOM CHAT TABLE ============================= --
+-- رسائل الشات في الرومات
+
+CREATE TABLE IF NOT EXISTS room_chat (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  room_id TEXT NOT NULL REFERENCES game_rooms(id) ON DELETE CASCADE,
+  player_id TEXT NOT NULL,
+  player_name TEXT NOT NULL,
+  message TEXT NOT NULL,
+  reactions JSONB DEFAULT '{}', -- {"😂": ["player_id1", "player_id2"], ...}
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_room_chat_room ON room_chat(room_id);
+CREATE INDEX IF NOT EXISTS idx_room_chat_created ON room_chat(created_at DESC);
+
+-- ============================= 9. ROOM GAME STATE TABLE ============================= --
+-- حالة اللعبة الحالية في كل روم
+
+CREATE TABLE IF NOT EXISTS room_game_state (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  room_id TEXT NOT NULL UNIQUE REFERENCES game_rooms(id) ON DELETE CASCADE,
+  current_round INTEGER DEFAULT 0,
+  current_question_cell TEXT, -- format: "cat-index-difficulty-row"
+  scores JSONB NOT NULL DEFAULT '{"A": 0, "B": 0}', -- {A: score, B: score}
+  questions_used JSONB DEFAULT '[]', -- قائمة الأسئلة المستخدمة
+  state_data JSONB DEFAULT '{}', -- بيانات إضافية حسب الحاجة
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  updated_by TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_room_game_state_room ON room_game_state(room_id);
+
 -- ============================= REALTIME SUBSCRIPTIONS ============================= --
 -- تفعيل Realtime للجداول الرئيسية
 
 ALTER PUBLICATION supabase_realtime ADD TABLE game_settings;
 ALTER PUBLICATION supabase_realtime ADD TABLE game_sessions;
 ALTER PUBLICATION supabase_realtime ADD TABLE game_rounds;
+ALTER PUBLICATION supabase_realtime ADD TABLE game_rooms;
+ALTER PUBLICATION supabase_realtime ADD TABLE room_players;
+ALTER PUBLICATION supabase_realtime ADD TABLE room_chat;
+ALTER PUBLICATION supabase_realtime ADD TABLE room_game_state;
 
 -- ============================= SEED DATA ============================= --
 -- إدراج بيانات أولية
@@ -205,10 +326,14 @@ CREATE TRIGGER on_game_completed
 -- توثيق الجداول
 
 COMMENT ON TABLE game_settings IS 'تخزين الإعدادات الرئيسية: الفئات، النقاط، بنك الأسئلة';
-COMMENT ON TABLE game_sessions IS 'تسجيل جلسات اللعب الكاملة';
+COMMENT ON TABLE game_sessions IS 'تسجيل جلسات اللعب الكاملة (محلية)';
 COMMENT ON TABLE game_rounds IS 'تفاصيل كل جولة في اللعبة';
 COMMENT ON TABLE team_statistics IS 'إحصائيات الفرق على مدار الوقت';
 COMMENT ON TABLE admin_logs IS 'سجل أنشطة الإدارة للتدقيق والأمان';
+COMMENT ON TABLE game_rooms IS 'غرف اللعب متعددة اللاعبين - مود أونلاين';
+COMMENT ON TABLE room_players IS 'اللاعبون في كل غرفة لعب';
+COMMENT ON TABLE room_chat IS 'رسائل الشات في الرومات مع دعم التفاعلات';
+COMMENT ON TABLE room_game_state IS 'حالة اللعبة الحية - تُحدّث فوراً عبر Realtime';
 
 -- ============================= COMPLETION ============================= --
 -- انتهى الإعداد!

@@ -199,3 +199,72 @@ document.addEventListener('DOMContentLoaded', async () => {
 window.addEventListener('beforeunload', () => {
   stopListeningToCloud();
 });
+
+/* ============================= ONLINE MODE SYNC ============================= */
+
+// الاستماع لتحديثات الروم الحالي
+function listenToRoomUpdates(roomId) {
+  if (!supa || !roomId) return;
+
+  try {
+    // الاستماع لحالة اللعبة
+    supa
+      .channel(`room_state_${roomId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'room_game_state',
+          filter: `room_id=eq.${roomId}`
+        },
+        (payload) => {
+          roomGameState = payload.new;
+          updateGameDisplay();
+          log('🔄 تحديث حالة اللعبة', 'info');
+        }
+      )
+      .subscribe();
+
+    // الاستماع للرسائل الجديدة
+    supa
+      .channel(`chat_${roomId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'room_chat',
+          filter: `room_id=eq.${roomId}`
+        },
+        (payload) => {
+          displayChatMessage(payload.new);
+          Sound.open();
+        }
+      )
+      .subscribe();
+
+    // الاستماع لتغييرات اللاعبين
+    supa
+      .channel(`players_${roomId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'room_players',
+          filter: `room_id=eq.${roomId}`
+        },
+        async () => {
+          await getRoomPlayers();
+          updatePlayersList();
+          log('🔄 تحديث قائمة اللاعبين', 'info');
+        }
+      )
+      .subscribe();
+
+    log('✅ تم الاشتراك في تحديثات الروم', 'success');
+  } catch (error) {
+    console.error('Listen to room updates error:', error);
+  }
+}

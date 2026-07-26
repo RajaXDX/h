@@ -590,3 +590,159 @@ async function pushToCloud() {
   if (!supa) return;
   // سيتم تنفيذها في sync.js
 }
+
+/* ============================= ONLINE MODE FUNCTIONS ============================= */
+
+function goToModeSelect() {
+  Sound.click();
+  showScreen('screen-mode-select');
+}
+
+function startLocalMode() {
+  Sound.click();
+  // وضع محلي = نفس النظام الحالي
+  goToSetup();
+}
+
+function goToRooms() {
+  Sound.click();
+  showScreen('screen-rooms');
+  loadAvailableRooms();
+}
+
+async function loadAvailableRooms() {
+  if (!supa) {
+    alert('❌ قاعدة البيانات غير متصلة');
+    return;
+  }
+
+  try {
+    const { data, error } = await supa
+      .from('game_rooms')
+      .select('*')
+      .eq('status', 'waiting')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (error) throw error;
+
+    const roomsList = document.getElementById('roomsList');
+    if (!roomsList) return;
+
+    if (!data || data.length === 0) {
+      roomsList.innerHTML = '<p style="text-align: center; color: #999;">لا توجد رومات متاحة حالياً</p>';
+      return;
+    }
+
+    roomsList.innerHTML = '';
+    data.forEach(room => {
+      const roomEl = createElement('div', { class: 'room-card' }, `
+        <div class="room-name">${room.name}</div>
+        <div class="room-code">الكود: <strong>${room.code}</strong></div>
+        <div class="room-mode">${room.mode === 'online' ? '🌐 أونلاين' : '💻 محلي'}</div>
+        <button class="btn btn-primary" onclick="selectRoomToJoin('${room.code}')">الدخول</button>
+      `);
+      roomsList.appendChild(roomEl);
+    });
+  } catch (error) {
+    console.error('Load rooms error:', error);
+    alert('❌ خطأ في تحميل الرومات');
+  }
+}
+
+function selectRoomToJoin(roomCode) {
+  const input = document.getElementById('roomCodeInput');
+  if (input) input.value = roomCode;
+  document.getElementById('playerNameInput')?.focus();
+}
+
+function showCreateRoomDialog() {
+  const roomName = prompt('اسم الروم:', 'جلسة اللعب');
+  if (!roomName) return;
+
+  createRoomAndEnter(roomName);
+}
+
+async function createRoomAndEnter(roomName) {
+  const playerName = prompt('اسمك:', 'اللاعب');
+  if (!playerName) return;
+
+  const room = await createRoom(roomName, 'online');
+  if (room) {
+    currentPlayer.name = playerName;
+    goToRoomSetup();
+  }
+}
+
+async function joinRoomByCode() {
+  const roomCode = document.getElementById('roomCodeInput')?.value?.toUpperCase();
+  const playerName = document.getElementById('playerNameInput')?.value;
+
+  if (!roomCode || roomCode.length < 4) {
+    alert('❌ أدخل كود الروم');
+    return;
+  }
+
+  if (!playerName) {
+    alert('❌ أدخل اسمك');
+    return;
+  }
+
+  const success = await joinRoom(roomCode, playerName);
+  if (success) {
+    goToRoomSetup();
+  }
+}
+
+function goToRoomSetup() {
+  Sound.click();
+  showScreen('screen-room-setup');
+  updateRoomSetupDisplay();
+}
+
+async function updateRoomSetupDisplay() {
+  if (!currentRoom) return;
+
+  const codeDisplay = document.getElementById('roomCodeDisplay');
+  if (codeDisplay) codeDisplay.textContent = currentRoom.code;
+
+  const modeDisplay = document.getElementById('roomModeDisplay');
+  if (modeDisplay) {
+    modeDisplay.textContent = currentRoom.mode === 'online' ? '🌐 أونلاين' : '💻 محلي';
+  }
+
+  const startBtn = document.getElementById('startGameBtn');
+  if (startBtn && currentPlayer?.is_host) {
+    startBtn.style.display = 'block';
+  }
+
+  await getRoomPlayers();
+  updatePlayersList();
+  await loadChatMessages();
+  createChatPanel();
+}
+
+async function startGameOnline() {
+  if (!currentPlayer?.is_host) {
+    alert('❌ فقط صاحب الروم يمكنه بدء اللعبة');
+    return;
+  }
+
+  // التحقق من أن جميع اللاعبين لهم فريق
+  const playersWithoutTeam = roomPlayers.filter(p => !p.team);
+  if (playersWithoutTeam.length > 0) {
+    alert('❌ يجب توزيع جميع اللاعبين على الفرق أولاً');
+    return;
+  }
+
+  // تحديث حالة الروم
+  await supa
+    .from('game_rooms')
+    .update({ status: 'active' })
+    .eq('id', currentRoom.id);
+
+  // الذهاب لشاشة اللعبة
+  Sound.click();
+  showScreen('screen-game');
+  renderBoard();
+}

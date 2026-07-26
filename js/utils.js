@@ -89,7 +89,7 @@ function goToCategories() {
 
 function showAbout() {
   Sound.click();
-  alert(`مخمخ رجا v2.0
+  alert(`تحدي رجا v2.0
 
 لعبة أسئلة ذكية جماعية
 
@@ -100,8 +100,8 @@ function showAbout() {
 • وسائل مساعدة ذكية
 • لوحة تحكم احترافية
 
-🚀 مطور: فريق مخمخ رجا
-📧 البريد: support@mokhamakh.app`);
+🚀 مطور: فريق تحدي رجا
+📧 البريد: support@challange-raj.app`);
 }
 
 /* ---- MODAL DIALOGS ---- */
