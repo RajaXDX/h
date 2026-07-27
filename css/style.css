@@ -1699,3 +1699,155 @@ footer p {
     max-height: none;
   }
 }
+
+/* ============================= TURN INDICATOR ============================= */
+
+.turn-banner {
+  text-align: center;
+  margin: 8px auto 4px;
+  font-size: 15px;
+  color: var(--text);
+  min-height: 22px;
+}
+
+.turn-banner .turn-label {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.team-card.active-turn {
+  box-shadow: 0 0 0 2px var(--gold), 0 0 18px rgba(212, 175, 55, 0.35);
+  transform: translateY(-2px);
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+/* إعلان الفريق الذي يبدأ */
+.start-toast {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: max-content;
+  height: max-content;
+  padding: 26px 40px;
+  background: rgba(8, 30, 24, 0.96);
+  border: 2px solid var(--gold);
+  border-radius: 18px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  z-index: 300;
+  text-align: center;
+  animation: startPop 0.35s ease;
+}
+
+.start-toast.fade-out {
+  opacity: 0;
+  transition: opacity 0.55s ease;
+}
+
+.start-toast-label {
+  color: var(--muted);
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.start-toast-team {
+  color: var(--gold);
+  font-family: 'Cairo', sans-serif;
+  font-weight: 900;
+  font-size: clamp(22px, 6vw, 34px);
+}
+
+@keyframes startPop {
+  from { transform: scale(0.85); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+/* ============================= END / WINNER SCREEN ============================= */
+
+.end-wrap {
+  text-align: center;
+  padding: 20px 10px;
+}
+
+.end-trophy {
+  font-size: clamp(56px, 16vw, 96px);
+  line-height: 1;
+  animation: trophyPop 0.5s ease;
+}
+
+@keyframes trophyPop {
+  0%   { transform: scale(0.4) rotate(-12deg); opacity: 0; }
+  70%  { transform: scale(1.12) rotate(4deg); }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+.end-title {
+  color: var(--muted);
+  font-size: 16px;
+  margin-top: 6px;
+}
+
+.end-winner {
+  margin: 10px auto 24px;
+}
+
+.winner-name {
+  font-family: 'Cairo', sans-serif;
+  font-weight: 900;
+  font-size: clamp(26px, 7vw, 44px);
+  color: var(--gold);
+  text-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+}
+
+.winner-margin,
+.tie-text {
+  color: var(--muted);
+  font-size: 15px;
+  margin-top: 6px;
+}
+
+.end-scores {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 26px;
+}
+
+.end-score-card {
+  min-width: 150px;
+  padding: 16px 22px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.end-score-card.lead {
+  border-color: var(--gold);
+  background: rgba(212, 175, 55, 0.12);
+}
+
+.end-team-name {
+  font-size: 14px;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.end-team-score {
+  font-family: 'Cairo', sans-serif;
+  font-weight: 900;
+  font-size: 34px;
+  color: var(--gold);
+}
+
+/* اللاعبون المشاهدون: الخلايا غير قابلة للضغط */
+.board.viewer-mode .cell:not(.used) {
+  cursor: default;
+  opacity: 0.92;
+}
+
+@media (max-width: 768px) {
+  .end-scores { gap: 10px; }
+  .end-score-card { min-width: 130px; padding: 12px 16px; }
+  .end-team-score { font-size: 28px; }
+  .turn-banner { font-size: 14px; }
+}

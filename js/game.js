@@ -53,6 +53,7 @@ let scores = { A: 0, B: 0 };
 let lifelineUsed = { A: [], B: [] };
 let activeRound = 0;
 let current = null;
+let activeTeam = null;   // الفريق صاحب الدور الحالي ('A' أو 'B')
 
 const DIFF = ['سهل', 'متوسط', 'صعب'];
 const DIFFKEY = ['easy', 'medium', 'hard'];
@@ -250,6 +251,9 @@ function startGame() {
   lifelineUsed = { A: [], B: [] };
   activeRound = 0;
 
+  // اختيار عشوائي لمن يبدأ اللعب
+  activeTeam = Math.random() < 0.5 ? 'A' : 'B';
+
   // إذا لم تكن في مود أونلاين، استخدم teamSetup. إذا كان في أونلاين، استخدم roomPlayers
   if (currentRoom) {
     // مود أونلاين - استخدم أسماء الفريق من Supabase
@@ -272,6 +276,132 @@ function startGame() {
     publishGameState();
   }
   applyViewerRestrictions();
+  announceStartingTeam();
+}
+
+/* ============================= TURN HANDLING ============================= */
+
+// إعلان الفريق الذي يبدأ اللعب في أول الجولة
+function announceStartingTeam() {
+  if (!activeTeam) return;
+
+  const name = getTeamName(activeTeam);
+  const icon = activeTeam === 'A' ? '🟢' : '🟡';
+
+  const box = createElement('div', { class: 'start-toast' }, `
+    <div class="start-toast-label">🎲 البداية مع</div>
+    <div class="start-toast-team">${icon} ${escapeHtml(name)}</div>
+  `);
+
+  document.body.appendChild(box);
+  Sound.start?.();
+
+  setTimeout(() => box.classList.add('fade-out'), 2200);
+  setTimeout(() => box.remove(), 2800);
+}
+
+// تبديل الدور للفريق الآخر
+function switchTurn() {
+  if (!activeTeam) return;
+  activeTeam = activeTeam === 'A' ? 'B' : 'A';
+  renderTurnIndicator();
+}
+
+function renderTurnIndicator() {
+  const banner = document.getElementById('turnBanner');
+  const cardA = document.getElementById('teamCardA');
+  const cardB = document.getElementById('teamCardB');
+
+  if (cardA) cardA.classList.toggle('active-turn', activeTeam === 'A');
+  if (cardB) cardB.classList.toggle('active-turn', activeTeam === 'B');
+
+  if (!banner) return;
+  if (!activeTeam) { banner.textContent = ''; return; }
+
+  const icon = activeTeam === 'A' ? '🟢' : '🟡';
+  banner.innerHTML = `<span class="turn-label">الدور الآن:</span> ${icon} <b>${escapeHtml(getTeamName(activeTeam))}</b>`;
+}
+
+/* ============================= END OF GAME ============================= */
+
+// هل استُهلكت كل الخلايا في كل الجولات؟
+function isGameFinished() {
+  if (!rounds.length) return false;
+
+  return rounds.every((cats, ri) => {
+    const roundState = stateUsed[ri];
+    if (!roundState) return false;
+    return cats.every((_, ci) => (roundState[ci] || []).every(Boolean));
+  });
+}
+
+function showEndScreen() {
+  const a = scores.A;
+  const b = scores.B;
+  const nameA = getTeamName('A');
+  const nameB = getTeamName('B');
+
+  const trophy = document.getElementById('endTrophy');
+  const title = document.getElementById('endTitle');
+  const winner = document.getElementById('endWinner');
+  const scoresEl = document.getElementById('endScores');
+
+  if (a === b) {
+    if (trophy) trophy.textContent = '🤝';
+    if (title) title.textContent = 'تعادل!';
+    if (winner) winner.innerHTML = `<span class="tie-text">الفريقان تعادلا بـ ${a} نقطة</span>`;
+  } else {
+    const winTeam = a > b ? 'A' : 'B';
+    const winName = a > b ? nameA : nameB;
+    const diff = Math.abs(a - b);
+    if (trophy) trophy.textContent = '🏆';
+    if (title) title.textContent = 'الفائز';
+    if (winner) {
+      winner.innerHTML = `
+        <div class="winner-name ${winTeam}">${winTeam === 'A' ? '🟢' : '🟡'} ${escapeHtml(winName)}</div>
+        <div class="winner-margin">بفارق ${diff} نقطة</div>
+      `;
+    }
+  }
+
+  if (scoresEl) {
+    scoresEl.innerHTML = `
+      <div class="end-score-card A ${a >= b ? 'lead' : ''}">
+        <div class="end-team-name">🟢 ${escapeHtml(nameA)}</div>
+        <div class="end-team-score">${a}</div>
+      </div>
+      <div class="end-score-card B ${b >= a ? 'lead' : ''}">
+        <div class="end-team-name">🟡 ${escapeHtml(nameB)}</div>
+        <div class="end-team-score">${b}</div>
+      </div>
+    `;
+  }
+
+  showScreen('screen-end');
+  Sound.award?.();
+}
+
+// زر "لعبة جديدة" من شاشة النهاية
+function playAgain() {
+  Sound.click();
+  if (isOnlineGame()) {
+    // نرجع لإعدادات الروم حتى يعيد المضيف اختيار الفئات
+    if (isOnlineHost()) {
+      publishGameState({ phase: 'lobby' });
+    }
+    goToRoomSetup();
+  } else {
+    goToSetup();
+  }
+}
+
+// اسم الفريق المعروض: في الأونلاين أسماء اللاعبين، وفي المحلي اسم الفريق
+function getTeamName(team) {
+  if (currentRoom && roomPlayers?.length) {
+    const members = roomPlayers.filter(p => p.team === team).map(p => p.player_name);
+    if (members.length) return members.join(' + ');
+  }
+  return teamSetup[team]?.name || (team === 'A' ? 'الفريق الأول' : 'الفريق الثاني');
 }
 
 function updateGameUI() {
@@ -280,23 +410,12 @@ function updateGameUI() {
   const scoreA = document.getElementById('scoreA');
   const scoreB = document.getElementById('scoreB');
 
-  // الحصول على أسماء الفريق من teamSetup أو من roomPlayers
-  let teamAName = teamSetup.A?.name || 'الفريق A';
-  let teamBName = teamSetup.B?.name || 'الفريق B';
-
-  if (currentRoom && roomPlayers.length > 0) {
-    // في مود أونلاين، استخدم أسماء اللاعبين من كل فريق
-    const teamA = roomPlayers.filter(p => p.team === 'A');
-    const teamB = roomPlayers.filter(p => p.team === 'B');
-    teamAName = teamA.map(p => p.player_name).join(' + ') || 'الفريق A';
-    teamBName = teamB.map(p => p.player_name).join(' + ') || 'الفريق B';
-  }
-
-  if (nameA) nameA.textContent = `🟢 ${teamAName}`;
-  if (nameB) nameB.textContent = `🟡 ${teamBName}`;
+  if (nameA) nameA.textContent = `🟢 ${getTeamName('A')}`;
+  if (nameB) nameB.textContent = `🟡 ${getTeamName('B')}`;
   if (scoreA) scoreA.textContent = scores.A;
   if (scoreB) scoreB.textContent = scores.B;
 
+  renderTurnIndicator();
   renderLifelineDisplay();
 }
 
@@ -569,6 +688,17 @@ function award(team) {
   stateUsed[activeRound][current.ci][current.row] = true;
   closeQuestion();
   renderBoard();
+
+  // الدور ينتقل للفريق الآخر بعد كل سؤال
+  switchTurn();
+
+  // انتهت كل الخلايا؟ نعرض شاشة الفوز
+  if (isGameFinished()) {
+    if (isOnlineHost()) publishGameState({ phase: 'ended' });
+    showEndScreen();
+    return;
+  }
+
   if (isOnlineHost()) publishGameState();
 }
 
@@ -590,7 +720,7 @@ function isOnlineHost() {
 }
 
 // صاحب الروم يبثّ حالة اللعبة كاملة حتى تظهر نفسها على كل الأجهزة
-function publishGameState() {
+function publishGameState(extra = {}) {
   if (!isOnlineHost()) return;
 
   const state = {
@@ -600,10 +730,12 @@ function publishGameState() {
     teamNames: { A: teamSetup.A.name, B: teamSetup.B.name },
     used: stateUsed,
     activeRound,
+    activeTeam,
     scores,
     openQuestion: current
       ? { ci: current.ci, row: current.row, round: activeRound, item: questionCache[`${activeRound}-${current.ci}-${current.row}`] }
-      : null
+      : null,
+    ...extra
   };
 
   updateRoomGameState({ state_data: state, scores, current_round: activeRound });
@@ -611,7 +743,15 @@ function publishGameState() {
 
 // كل الأجهزة (بما فيها صاحب الروم) تطبّق الحالة القادمة من السحابة
 function applyRemoteGameState(state) {
-  if (!state || state.phase !== 'playing') return;
+  if (!state) return;
+
+  // المضيف رجع للوبي (لعبة جديدة) → نرجع معه
+  if (state.phase === 'lobby') {
+    if (!isOnlineHost()) goToRoomSetup();
+    return;
+  }
+
+  if (state.phase !== 'playing' && state.phase !== 'ended') return;
 
   // نعيد بناء الجولات من أسماء الفئات المُرسلة
   rounds = (state.categories || []).map(names =>
@@ -626,7 +766,15 @@ function applyRemoteGameState(state) {
   }
   if (state.used) stateUsed = state.used;
   if (state.scores) scores = state.scores;
+  if (state.activeTeam) activeTeam = state.activeTeam;
   activeRound = state.activeRound || 0;
+
+  // انتهت اللعبة → شاشة الفوز على كل الأجهزة
+  if (state.phase === 'ended') {
+    updateGameUI();
+    if (!document.querySelector('#screen-end.active')) showEndScreen();
+    return;
+  }
 
   const alreadyPlaying = document.querySelector('#screen-game.active');
   if (!alreadyPlaying) {

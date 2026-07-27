@@ -183,12 +183,40 @@
 <!-- شاشة اللعبة -->
 <div class="screen" id="screen-game">
   <div class="game-header">
-    <div class="scoreboard" id="scoreboard"></div>
+    <div class="scoreboard" id="scoreboard">
+      <div class="team-card A" id="teamCardA">
+        <div class="team-name" id="gameNameA">الفريق الأول</div>
+        <div class="team-score" id="scoreA">0</div>
+        <div class="team-lifelines" id="lifeDisplayA"></div>
+      </div>
+      <div class="team-card B" id="teamCardB">
+        <div class="team-name" id="gameNameB">الفريق الثاني</div>
+        <div class="team-score" id="scoreB">0</div>
+        <div class="team-lifelines" id="lifeDisplayB"></div>
+      </div>
+    </div>
+    <div class="turn-banner" id="turnBanner"></div>
     <button class="reset-btn" onclick="backToSetupConfirm()">↺ لعبة جديدة</button>
   </div>
 
   <div class="round-tabs" id="roundTabs"></div>
   <div class="board-wrap"><div class="board" id="board"></div></div>
+</div>
+
+<!-- شاشة النهاية والفوز -->
+<div class="screen" id="screen-end">
+  <div class="end-wrap">
+    <div class="end-trophy" id="endTrophy">🏆</div>
+    <div class="end-title" id="endTitle">انتهت اللعبة</div>
+    <div class="end-winner" id="endWinner"></div>
+
+    <div class="end-scores" id="endScores"></div>
+
+    <div class="nav-buttons">
+      <button class="btn-main btn-ghost" onclick="goToHome()">← الرئيسية</button>
+      <button class="btn-main btn-primary" onclick="playAgain()">🔄 لعبة جديدة</button>
+    </div>
+  </div>
 </div>
 
 <!-- لوحة التحكم -->
