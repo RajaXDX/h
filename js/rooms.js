@@ -203,6 +203,78 @@ async function joinRoom(roomCode, playerName) {
   }
 }
 
+/* ============================= ROOM SHARING ============================= */
+
+// رابط يفتح الروم مباشرة بدل إملاء الكود صوتياً وكتابته يدوياً
+function getRoomLink() {
+  if (!currentRoom) return '';
+  const base = location.origin + location.pathname;
+  return `${base}?room=${currentRoom.code}`;
+}
+
+function getRoomShareText() {
+  return `تعال العب معنا «تحدي رجا» 🎮\nكود الروم: ${currentRoom?.code}\n${getRoomLink()}`;
+}
+
+function shareRoomWhatsApp() {
+  if (!currentRoom) return;
+  Sound.click();
+  window.open('https://wa.me/?text=' + encodeURIComponent(getRoomShareText()), '_blank');
+}
+
+async function copyRoomLink() {
+  if (!currentRoom) return;
+  Sound.click();
+
+  const link = getRoomLink();
+  const btn = document.getElementById('copyLinkBtn');
+  const done = () => {
+    if (!btn) return;
+    const original = btn.innerHTML;
+    btn.innerHTML = '<span class="btn-icon">✅</span><span>تم النسخ</span>';
+    setTimeout(() => { btn.innerHTML = original; }, 1800);
+  };
+
+  try {
+    await navigator.clipboard.writeText(link);
+    done();
+  } catch (e) {
+    // بديل للمتصفحات التي تمنع الحافظة بدون HTTPS
+    const tmp = document.createElement('textarea');
+    tmp.value = link;
+    tmp.style.position = 'fixed';
+    tmp.style.opacity = '0';
+    document.body.appendChild(tmp);
+    tmp.select();
+    try { document.execCommand('copy'); done(); }
+    catch (err) { prompt('انسخ الرابط:', link); }
+    tmp.remove();
+  }
+}
+
+// يقرأ ?room=CODE من الرابط ويفتح شاشة الدخول بالكود جاهزاً
+async function handleRoomLinkOnLoad() {
+  const code = new URLSearchParams(location.search).get('room');
+  if (!code) return false;
+
+  // ننظّف الرابط حتى لا يتكرر الدخول عند التحديث
+  history.replaceState(null, '', location.pathname);
+
+  goToRooms();
+  const input = document.getElementById('roomCodeInput');
+  if (input) input.value = code.toUpperCase().trim();
+
+  const nameInput = document.getElementById('playerNameInput');
+  if (nameInput) {
+    const saved = loadJSON(ROOM_SESSION_KEY, null);
+    if (saved?.playerName) nameInput.value = saved.playerName;
+    nameInput.focus();
+  }
+
+  log(`🔗 رابط روم: ${code}`, 'info');
+  return true;
+}
+
 /* ============================= SESSION PERSISTENCE ============================= */
 
 // نحفظ هوية الجلسة حتى يعود اللاعب تلقائياً بعد تحديث الصفحة أو انقطاع الشبكة

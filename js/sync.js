@@ -210,11 +210,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // بدء الاستماع للتغييرات
     listenToCloudChanges();
 
-    // إعادة اللاعب لرومه إن كان قد حدّث الصفحة أو انقطع اتصاله
+    // رابط روم في العنوان له الأولوية على استعادة الجلسة القديمة
     try {
-      await restoreRoomSession();
+      const fromLink = await handleRoomLinkOnLoad();
+      if (!fromLink) await restoreRoomSession();
     } catch (e) {
-      console.warn('تعذّرت العودة للروم السابقة:', e);
+      console.warn('تعذّرت معالجة رابط/جلسة الروم:', e);
     }
   }
 

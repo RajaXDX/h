@@ -150,6 +150,18 @@
     </div>
   </div>
 
+  <div class="room-share">
+    <div class="room-share-hint">أرسل الرابط لأصحابك — يفتح الروم عندهم مباشرة</div>
+    <div class="room-share-buttons">
+      <button class="btn-main btn-primary" onclick="shareRoomWhatsApp()">
+        <span class="btn-icon">💬</span><span>مشاركة على واتساب</span>
+      </button>
+      <button class="btn-main btn-ghost" id="copyLinkBtn" onclick="copyRoomLink()">
+        <span class="btn-icon">🔗</span><span>نسخ الرابط</span>
+      </button>
+    </div>
+  </div>
+
   <div class="room-players-section">
     <h3>🎮 اللاعبون</h3>
     <div id="teamDistributionUI" style="display:none; margin-bottom: 20px;">

@@ -1851,3 +1851,37 @@ footer p {
   .end-team-score { font-size: 28px; }
   .turn-banner { font-size: 14px; }
 }
+
+/* ============================= ROOM SHARING ============================= */
+
+.room-share {
+  margin: 16px auto 22px;
+  padding: 16px;
+  background: rgba(212, 175, 55, 0.07);
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  border-radius: 14px;
+  text-align: center;
+}
+
+.room-share-hint {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.room-share-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.room-share-buttons .btn-main {
+  flex: 0 1 auto;
+  min-width: 180px;
+}
+
+@media (max-width: 768px) {
+  .room-share-buttons { flex-direction: column; }
+  .room-share-buttons .btn-main { width: 100%; min-width: 0; }
+}
