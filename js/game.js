@@ -573,7 +573,14 @@ const QBANK_FILES = [
   'data/questions.json',
   'data/questions-part2.json',
   'data/questions-part3.json',
-  'data/questions-part2-continued.json'
+  'data/questions-part2-continued.json',
+  'data/questions-part4.json',
+  'data/questions-part5.json',
+  'data/questions-part6.json',
+  'data/questions-part7.json',
+  'data/questions-part8.json',
+  'data/questions-part9.json',
+  'data/questions-part10.json'
 ];
 
 // يقرأ كل ملفات الأسئلة المرفقة مع المشروع (يتجاوز أي ملف ناقص بدل ما يفشل كلياً)
