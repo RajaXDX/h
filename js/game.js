@@ -379,6 +379,36 @@ function showEndScreen() {
   Sound.award?.();
 }
 
+// مشاركة نتيجة اللعبة — لحظة الفوز هي أقوى لحظة يميل فيها اللاعبون للمشاركة
+function buildResultText() {
+  const a = scores.A, b = scores.B;
+  const nameA = getTeamName('A'), nameB = getTeamName('B');
+  const url = location.origin + location.pathname;
+
+  const header = a === b
+    ? `🤝 تعادل في «تحدي رجا»!`
+    : `🏆 فاز ${a > b ? nameA : nameB} في «تحدي رجا»!`;
+
+  return `${header}\n\n🟢 ${nameA}: ${a}\n🟡 ${nameB}: ${b}\n\nجرّبوها: ${url}`;
+}
+
+async function shareResult() {
+  Sound.click();
+  const text = buildResultText();
+
+  // مشاركة النظام الأصلية (تفتح واتساب وغيره) حيث تتوفر
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'تحدي رجا', text });
+      return;
+    } catch (e) {
+      if (e?.name === 'AbortError') return; // المستخدم ألغى
+    }
+  }
+
+  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+}
+
 // زر "لعبة جديدة" من شاشة النهاية
 function playAgain() {
   Sound.click();
