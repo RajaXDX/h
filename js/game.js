@@ -567,21 +567,30 @@ document.addEventListener('DOMContentLoaded', () => {
   bootstrapQuestionBankIfEmpty();
 });
 
-// يحمّل بنك الأسئلة الافتراضي من data/questions.json و data/questions-part2.json
+// يحمّل بنك الأسئلة الافتراضي من data/questions*.json
 // فقط إذا كان البنك المحلي (localStorage/السحابة) فارغاً بعد، حتى لا يطغى على بيانات حقيقية
 async function bootstrapQuestionBankIfEmpty() {
   if (Object.keys(QBANK).length > 0) return;
 
   try {
-    const [r1, r2] = await Promise.all([
-      fetch('data/questions.json'),
-      fetch('data/questions-part2.json'),
-    ]);
-    const [d1, d2] = await Promise.all([r1.json(), r2.json()]);
+    const files = [
+      'data/questions.json',
+      'data/questions-part2.json',
+      'data/questions-part3.json',
+      'data/questions-part2-continued.json'
+    ];
+
+    const responses = await Promise.all(files.map(f => fetch(f).catch(() => null)));
+    const dataPromises = responses.map((r, i) => {
+      if (!r || !r.ok) return Promise.resolve({});
+      return r.json().catch(() => ({}));
+    });
+    const allData = await Promise.all(dataPromises);
 
     if (Object.keys(QBANK).length > 0) return; // تجنّب سباق مع سحب بيانات حقيقية من السحابة
 
-    QBANK = { ...d1, ...d2 };
+    // دمج جميع البيانات
+    QBANK = allData.reduce((acc, data) => ({ ...acc, ...data }), {});
     saveJSON('mr_bank', QBANK);
     updateTotalStats();
 
