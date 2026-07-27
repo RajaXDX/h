@@ -1885,3 +1885,60 @@ footer p {
   .room-share-buttons { flex-direction: column; }
   .room-share-buttons .btn-main { width: 100%; min-width: 0; }
 }
+
+/* ============================= TOUCH TARGETS & LEGIBILITY ============================= */
+/* الحد الموصى به عالمياً لمساحة اللمس 44×44 بكسل */
+
+.btn-close,
+.chat-close {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kick-btn,
+.team-btn,
+.reaction-btn {
+  min-height: 38px;
+}
+
+@media (max-width: 768px) {
+  /* رفع أصغر الخطوط لحد مقروء على الجوال */
+  .step-sub,
+  .lifeline-count,
+  .stat-label,
+  .chat-text,
+  .chat-time,
+  .room-share-hint,
+  .sync-indicator {
+    font-size: 13px;
+  }
+
+  .lifeline-chip { font-size: 12px; }
+  .chat-input, .chat-send-btn { font-size: 15px; }
+
+  /* لوحة اللعب: تمرير أفقي بدل ضغط 6 أعمدة في شاشة ضيقة */
+  .board-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 12px 8px;
+  }
+
+  .board {
+    min-width: 560px;   /* ~93px لكل عمود عند 6 أعمدة */
+    gap: 8px;
+  }
+
+  .cell {
+    min-height: 62px;
+    font-size: 16px;
+    padding: 10px 4px;
+  }
+
+  .cat-header {
+    font-size: 12px;
+    padding: 8px 4px;
+  }
+}
