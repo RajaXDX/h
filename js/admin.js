@@ -520,35 +520,60 @@ function countBankQuestions() {
 
 /* ============================= CLEANUP ROOMS ============================= */
 
+// ملاحظة: سياسات RLS في Supabase تسمح بالقراءة والإضافة والتعديل فقط — لا يوجد DELETE،
+// لذلك كان الحذف يفشل بصمت (بدون خطأ وبدون أن يُحذف شيء).
+// الحل هنا: نُغلق الرومات القديمة (status = completed) فتختفي من أي قائمة رومات نشطة.
 async function cleanupOldRooms() {
   if (!supa) {
     alert('❌ Supabase غير متصل');
     return;
   }
 
-  if (!confirm('🗑️ حذف جميع الرومات القديمة من السحابة؟ (هذا لا يمكن التراجع عنه)')) {
-    return;
-  }
-
   try {
-    // حذف جميع الرومات
-    const { error: roomsError } = await supa.from('game_rooms').delete().gt('id', '0');
+    const { data: openRooms, error: readError } = await supa
+      .from('game_rooms')
+      .select('id, code, name, status')
+      .neq('status', 'completed');
+
+    if (readError) throw readError;
+
+    if (!openRooms || openRooms.length === 0) {
+      alert('ℹ️ لا توجد رومات مفتوحة — كل شيء نظيف');
+      return;
+    }
+
+    if (!confirm(`إغلاق ${openRooms.length} روم مفتوحة؟\nاللاعبون فيها سيحتاجون إنشاء روم جديدة.`)) {
+      return;
+    }
+
+    const ids = openRooms.map(r => r.id);
+
+    const { error: roomsError } = await supa
+      .from('game_rooms')
+      .update({ status: 'completed' })
+      .in('id', ids);
     if (roomsError) throw roomsError;
 
-    // حذف جميع لاعبي الرومات
-    const { error: playersError } = await supa.from('room_players').delete().gt('id', '0');
-    if (playersError) throw playersError;
+    // إخراج اللاعبين من تلك الرومات
+    await supa
+      .from('room_players')
+      .update({ status: 'left', left_at: new Date().toISOString() })
+      .in('room_id', ids);
 
-    // حذف جميع رسائل الشات
-    const { error: chatError } = await supa.from('room_chat').delete().gt('id', '0');
-    if (chatError) throw chatError;
+    // تحقق فعلي أن الإغلاق تم
+    const { data: stillOpen } = await supa
+      .from('game_rooms')
+      .select('id')
+      .neq('status', 'completed');
 
-    // حذف حالات اللعبة
-    const { error: stateError } = await supa.from('room_game_state').delete().gt('id', '0');
-    if (stateError) throw stateError;
+    const remaining = stillOpen?.length ?? 0;
+    if (remaining > 0) {
+      alert(`⚠️ أُغلقت ${openRooms.length - remaining} روم، وبقيت ${remaining} لم تُغلق (تحقّق من صلاحيات Supabase)`);
+    } else {
+      alert(`✅ تم إغلاق ${openRooms.length} روم`);
+    }
 
-    alert('✅ تم حذف جميع الرومات والبيانات المتعلقة بها');
-    log('🗑️ تم تنظيف الرومات القديمة', 'success');
+    log(`🧹 تم إغلاق ${openRooms.length - remaining} روم`, 'success');
   } catch (error) {
     console.error('Cleanup error:', error);
     alert(`❌ خطأ: ${error.message}`);

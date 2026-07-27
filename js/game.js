@@ -265,6 +265,13 @@ function startGame() {
   showScreen('screen-game');
   renderTabs();
   renderBoard();
+
+  // في الأونلاين: صاحب الروم يبثّ بداية اللعبة فتظهر اللوحة على كل الأجهزة
+  if (isOnlineHost()) {
+    supa?.from('game_rooms').update({ status: 'active' }).eq('id', currentRoom.id);
+    publishGameState();
+  }
+  applyViewerRestrictions();
 }
 
 function updateGameUI() {
@@ -342,9 +349,11 @@ function renderTabs() {
     }, `الجولة ${i + 1}`);
 
     b.onclick = () => {
+      if (isOnlineGame() && !currentPlayer?.is_host) return;
       activeRound = i;
       renderTabs();
       renderBoard();
+      if (isOnlineHost()) publishGameState();
     };
 
     tabs.appendChild(b);
@@ -353,6 +362,8 @@ function renderTabs() {
 
 function renderBoard() {
   const cats = rounds[activeRound];
+  // قد تُستدعى قبل أن تصل بيانات الجولات (مثلاً عند لاعب في روم لم تبدأ لعبته بعد)
+  if (!Array.isArray(cats) || cats.length === 0) return;
   const board = document.getElementById('board');
   if (!board) return;
 
@@ -387,6 +398,12 @@ function renderBoard() {
 /* ============================= QUESTION DIALOG ============================= */
 
 function openQuestion(ci, row) {
+  // في الأونلاين صاحب الروم وحده يفتح الأسئلة، والباقي يشاهدون
+  if (isOnlineGame() && !currentPlayer?.is_host) {
+    log('صاحب الروم هو من يفتح الأسئلة', 'info');
+    return;
+  }
+
   Sound.open();
   const cat = rounds[activeRound][ci];
   current = { ci, row, cat };
@@ -414,6 +431,7 @@ function openQuestion(ci, row) {
   }
 
   renderQuestionBody(item);
+  if (isOnlineHost()) publishGameState();
 }
 
 function showQuickAddForm(cat, row, ci) {
@@ -551,11 +569,108 @@ function award(team) {
   stateUsed[activeRound][current.ci][current.row] = true;
   closeQuestion();
   renderBoard();
+  if (isOnlineHost()) publishGameState();
 }
 
 function closeQuestion() {
   document.getElementById('overlay').classList.remove('show');
   current = null;
+  if (isOnlineHost()) publishGameState();
+}
+
+/* ============================= ONLINE GAME STATE SYNC ============================= */
+
+// هل نحن في روم أونلاين؟ وهل نحن صاحب الروم؟
+function isOnlineGame() {
+  return !!(typeof currentRoom !== 'undefined' && currentRoom);
+}
+
+function isOnlineHost() {
+  return isOnlineGame() && !!currentPlayer?.is_host;
+}
+
+// صاحب الروم يبثّ حالة اللعبة كاملة حتى تظهر نفسها على كل الأجهزة
+function publishGameState() {
+  if (!isOnlineHost()) return;
+
+  const state = {
+    phase: 'playing',
+    categories: rounds.map(r => r.map(c => c.name)),
+    points: POINTS,
+    teamNames: { A: teamSetup.A.name, B: teamSetup.B.name },
+    used: stateUsed,
+    activeRound,
+    scores,
+    openQuestion: current
+      ? { ci: current.ci, row: current.row, round: activeRound, item: questionCache[`${activeRound}-${current.ci}-${current.row}`] }
+      : null
+  };
+
+  updateRoomGameState({ state_data: state, scores, current_round: activeRound });
+}
+
+// كل الأجهزة (بما فيها صاحب الروم) تطبّق الحالة القادمة من السحابة
+function applyRemoteGameState(state) {
+  if (!state || state.phase !== 'playing') return;
+
+  // نعيد بناء الجولات من أسماء الفئات المُرسلة
+  rounds = (state.categories || []).map(names =>
+    names.map(n => CATEGORIES.find(c => c.name === n) || { name: n, ic: '✨' })
+  );
+  if (!rounds.length) return;
+
+  if (Array.isArray(state.points) && state.points.length) POINTS = state.points;
+  if (state.teamNames) {
+    teamSetup.A.name = state.teamNames.A || teamSetup.A.name;
+    teamSetup.B.name = state.teamNames.B || teamSetup.B.name;
+  }
+  if (state.used) stateUsed = state.used;
+  if (state.scores) scores = state.scores;
+  activeRound = state.activeRound || 0;
+
+  const alreadyPlaying = document.querySelector('#screen-game.active');
+  if (!alreadyPlaying) {
+    showScreen('screen-game');
+  }
+
+  updateGameUI();
+  renderTabs();
+  renderBoard();
+
+  // مزامنة نافذة السؤال المفتوح
+  const q = state.openQuestion;
+  const overlay = document.getElementById('overlay');
+  if (q && q.item) {
+    const cat = rounds[q.round]?.[q.ci];
+    if (cat) {
+      current = { ci: q.ci, row: q.row, cat };
+      questionCache[`${q.round}-${q.ci}-${q.row}`] = q.item;
+      document.getElementById('qcat').innerHTML = `${cat.ic} ${cat.name}`;
+      document.getElementById('qpoints').textContent = `${POINTS[q.row]} نقطة`;
+      renderQuestionBody(q.item);
+      overlay.classList.add('show');
+    }
+  } else if (!isOnlineHost()) {
+    overlay.classList.remove('show');
+    current = null;
+  }
+
+  applyViewerRestrictions();
+}
+
+// اللاعبون غير المضيف يشاهدون فقط: لا فتح أسئلة ولا إعطاء نقاط
+function applyViewerRestrictions() {
+  if (!isOnlineGame()) return;
+  const viewer = !currentPlayer?.is_host;
+
+  const corners = document.getElementById('cornersBar');
+  if (corners) {
+    const awardCorner = corners.children[1];
+    if (awardCorner) awardCorner.style.display = viewer ? 'none' : '';
+  }
+
+  const board = document.getElementById('board');
+  if (board) board.classList.toggle('viewer-mode', viewer);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -583,11 +698,17 @@ const QBANK_FILES = [
   'data/questions-part10.json'
 ];
 
+// نجلب الملفات مرة واحدة فقط لكل تحميل صفحة ونعيد استخدام النتيجة،
+// لأن الدالة تُستدعى مرتين (عند التحميل وبعد سحب السحابة) وكان ذلك يضاعف الطلبات
+let bundledQuestionFilesPromise = null;
+
 // يقرأ كل ملفات الأسئلة المرفقة مع المشروع (يتجاوز أي ملف ناقص بدل ما يفشل كلياً)
-async function fetchBundledQuestionFiles() {
-  const results = await Promise.all(QBANK_FILES.map(async (path) => {
+function fetchBundledQuestionFiles() {
+  if (bundledQuestionFilesPromise) return bundledQuestionFilesPromise;
+
+  bundledQuestionFilesPromise = Promise.all(QBANK_FILES.map(async (path) => {
     try {
-      const res = await fetch(path, { cache: 'no-cache' });
+      const res = await fetch(path);
       if (!res.ok) return {};
       const data = await res.json();
       return (data && typeof data === 'object') ? data : {};
@@ -596,7 +717,8 @@ async function fetchBundledQuestionFiles() {
       return {};
     }
   }));
-  return results;
+
+  return bundledQuestionFilesPromise;
 }
 
 // يدمج أسئلة جديدة داخل البنك بدون حذف أي سؤال مضاف يدوياً،

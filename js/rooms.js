@@ -234,6 +234,55 @@ async function assignPlayerToTeam(playerId, team) {
   }
 }
 
+/* ============================= KICK PLAYER ============================= */
+
+async function kickPlayer(playerId, playerName) {
+  if (!currentRoom || !currentPlayer?.is_host) {
+    alert('❌ فقط صاحب الروم يمكنه طرد اللاعبين');
+    return false;
+  }
+
+  if (playerId === currentPlayer.player_id) {
+    alert('❌ لا يمكنك طرد نفسك');
+    return false;
+  }
+
+  if (!confirm(`طرد ${playerName || 'هذا اللاعب'} من الروم؟`)) return false;
+
+  try {
+    const { error } = await supa
+      .from('room_players')
+      .update({ status: 'kicked', left_at: new Date().toISOString() })
+      .eq('room_id', currentRoom.id)
+      .eq('player_id', playerId);
+
+    if (error) throw error;
+
+    await getRoomPlayers();
+    updatePlayersList();
+    log(`👋 تم طرد ${playerName || playerId}`, 'success');
+    return true;
+  } catch (error) {
+    console.error('Kick player error:', error);
+    alert(`❌ تعذّر الطرد: ${error.message}`);
+    return false;
+  }
+}
+
+// يُستدعى على جهاز اللاعب نفسه عندما يُطرد
+async function handleKickedOut() {
+  unsubscribeFromRoom();
+  if (typeof hideChatUI === 'function') hideChatUI();
+
+  currentRoom = null;
+  currentPlayer = null;
+  roomPlayers = [];
+  roomChatMessages = [];
+
+  alert('👋 تم إخراجك من الروم');
+  showScreen('screen-home');
+}
+
 async function updateRoomGameState(updateData) {
   if (!currentRoom) return false;
 
@@ -299,7 +348,14 @@ function subscribeToRoom(roomId) {
         },
         (payload) => {
           roomGameState = payload.new;
-          updateGameDisplay();
+          // نطبّق حالة اللعب أولاً (تبني الجولات) ثم نحدّث العرض،
+          // وإلا حاول العرض الرسم قبل وصول بيانات الجولات
+          try {
+            if (payload.new?.state_data) applyRemoteGameState(payload.new.state_data);
+            updateGameDisplay();
+          } catch (e) {
+            console.error('تعذّر تطبيق حالة اللعبة:', e);
+          }
           log('🔄 تحديث حالة اللعبة', 'info');
         }
       )
@@ -338,6 +394,14 @@ function subscribeToRoom(roomId) {
         },
         async () => {
           await getRoomPlayers();
+
+          // إذا لم أعد ضمن اللاعبين النشطين فقد طُردت من الروم
+          const stillIn = roomPlayers.some(p => p.player_id === currentPlayer?.player_id);
+          if (currentPlayer && !stillIn) {
+            await handleKickedOut();
+            return;
+          }
+
           updatePlayersList();
           log('🔄 تحديث قائمة اللاعبين', 'info');
         }
@@ -421,13 +485,17 @@ function updatePlayersList() {
     if (playersList) {
       playersList.innerHTML = '';
       roomPlayers.forEach(player => {
+        const isMe = player.player_id === currentPlayer.player_id;
+        const safeName = escapeHtml(player.player_name || '');
         const playerDiv = createElement('div', { class: 'player-item' }, `
-          <span class="player-name">${player.player_name}</span>
+          <span class="player-name">${safeName}${isMe ? ' (أنت)' : ''}</span>
           <div class="team-buttons">
             <button class="team-btn ${player.team === 'A' ? 'selected' : ''}"
               onclick="assignPlayerToTeam('${player.player_id}', 'A')">فريق أ</button>
             <button class="team-btn ${player.team === 'B' ? 'selected' : ''}"
               onclick="assignPlayerToTeam('${player.player_id}', 'B')">فريق ب</button>
+            ${isMe ? '' : `<button class="kick-btn" title="طرد من الروم"
+              onclick="kickPlayer('${player.player_id}', '${safeName.replace(/'/g, "\\'")}')">🚫 طرد</button>`}
           </div>
         `);
         playersList.appendChild(playerDiv);

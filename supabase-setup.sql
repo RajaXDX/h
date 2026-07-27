@@ -188,6 +188,20 @@ CREATE POLICY "allow_public_insert_state" ON room_game_state
 CREATE POLICY "allow_public_update_state" ON room_game_state
   FOR UPDATE USING (true);
 
+-- سياسات الحذف — كانت ناقصة، فكان أي DELETE من التطبيق يفشل بصمت
+-- (بدون رسالة خطأ وبدون حذف أي صف). شغّل هذا الجزء لتفعيل الحذف النهائي للرومات.
+CREATE POLICY "allow_public_delete_rooms" ON game_rooms
+  FOR DELETE USING (true);
+
+CREATE POLICY "allow_public_delete_players" ON room_players
+  FOR DELETE USING (true);
+
+CREATE POLICY "allow_public_delete_chat" ON room_chat
+  FOR DELETE USING (true);
+
+CREATE POLICY "allow_public_delete_state" ON room_game_state
+  FOR DELETE USING (true);
+
 -- ============================= 6. GAME ROOMS TABLE ============================= --
 -- غرف اللعب متعددة اللاعبين
 

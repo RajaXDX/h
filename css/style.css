@@ -1402,6 +1402,31 @@ footer p {
   flex: 0 0 auto;
 }
 
+/* زر طرد لاعب من الروم (يظهر لصاحب الروم فقط) */
+.kick-btn {
+  padding: 6px 10px;
+  background: rgba(200, 60, 60, 0.15);
+  border: 1px solid rgba(220, 80, 80, 0.6);
+  border-radius: 6px;
+  color: #ff8a8a;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.kick-btn:hover {
+  background: rgba(220, 60, 60, 0.35);
+  color: #fff;
+}
+
+/* اللاعبون غير المضيف يشاهدون اللوحة بدون إمكانية فتح الأسئلة */
+.board.viewer-mode .cell {
+  cursor: default;
+  opacity: 0.92;
+}
+
 /* الزر العائم لفتح الشات */
 .chat-fab {
   position: fixed;

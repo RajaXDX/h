@@ -75,36 +75,26 @@ async function pullFromCloudOnce() {
   try {
     setSyncStatus('syncing');
 
-    // جلب الفئات
-    const { data: catData, error: catError } = await supa
-      .from('game_settings')
-      .select('data')
-      .eq('id', 'categories')
-      .single();
+    // الثلاثة بالتوازي بدل التسلسل (كانت ثلاث رحلات شبكة متتابعة قبل ظهور اللعبة)
+    const [
+      { data: catData, error: catError },
+      { data: pointsData, error: pointsError },
+      { data: bankData, error: bankError }
+    ] = await Promise.all([
+      supa.from('game_settings').select('data').eq('id', 'categories').single(),
+      supa.from('game_settings').select('data').eq('id', 'points').single(),
+      supa.from('game_settings').select('data').eq('id', 'question_bank').single()
+    ]);
 
     if (!catError && Array.isArray(catData?.data) && catData.data.length > 0) {
       CATEGORIES = catData.data;
       saveJSON('mr_categories', CATEGORIES);
     }
 
-    // جلب النقاط
-    const { data: pointsData, error: pointsError } = await supa
-      .from('game_settings')
-      .select('data')
-      .eq('id', 'points')
-      .single();
-
     if (!pointsError && Array.isArray(pointsData?.data) && pointsData.data.length > 0) {
       POINTS = pointsData.data;
       saveJSON('mr_points', POINTS);
     }
-
-    // جلب بنك الأسئلة
-    const { data: bankData, error: bankError } = await supa
-      .from('game_settings')
-      .select('data')
-      .eq('id', 'question_bank')
-      .single();
 
     // ندمج بيانات السحابة داخل البنك الحالي بدل استبداله،
     // حتى لا تمحو نسخة سحابية قديمة الأسئلة المحمّلة من ملفات المشروع

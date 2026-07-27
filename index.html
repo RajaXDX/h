@@ -6,8 +6,9 @@
   <title>تحدي رجا - لعبة أسئلة جماعية</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800;900&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/responsive.css">
+  <!-- ?v= رقم الإصدار: غيّره عند أي تعديل حتى تصل النسخة الجديدة للمتصفحات بدون Ctrl+Shift+R -->
+  <link rel="stylesheet" href="css/style.css?v=20260727c">
+  <link rel="stylesheet" href="css/responsive.css?v=20260727c">
 </head>
 <body>
 
@@ -265,9 +266,9 @@
         <p style="font-size: 12px; color: #999; margin-top: 8px;">يضيف أي أسئلة جديدة بدون حذف الأسئلة المضافة يدوياً</p>
       </div>
       <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.2);">
-        <h4 style="margin: 0 0 12px 0;">🗑️ تنظيف البيانات</h4>
-        <button class="btn btn-skip" onclick="cleanupOldRooms()" style="width: 100%;">حذف جميع الرومات القديمة</button>
-        <p style="font-size: 12px; color: #999; margin-top: 8px;">هذا سيحذف جميع الرومات والرسائل والبيانات المتعلقة بها من السحابة</p>
+        <h4 style="margin: 0 0 12px 0;">🧹 تنظيف الرومات</h4>
+        <button class="btn btn-skip" onclick="cleanupOldRooms()" style="width: 100%;">إغلاق كل الرومات المفتوحة</button>
+        <p style="font-size: 12px; color: #999; margin-top: 8px;">يُغلق الرومات القديمة ويُخرج اللاعبين منها. (الحذف النهائي يحتاج صلاحية DELETE في Supabase)</p>
       </div>
     </div>
   </div>
@@ -313,13 +314,13 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <!-- ملفات JS الرئيسية -->
-<script src="js/supabase-config.js"></script>
-<script src="js/utils.js"></script>
-<script src="js/game.js"></script>
-<script src="js/admin.js"></script>
-<script src="js/sync.js"></script>
-<script src="js/rooms.js"></script>
-<script src="js/chat.js"></script>
+<script src="js/supabase-config.js?v=20260727c"></script>
+<script src="js/utils.js?v=20260727c"></script>
+<script src="js/game.js?v=20260727c"></script>
+<script src="js/admin.js?v=20260727c"></script>
+<script src="js/sync.js?v=20260727c"></script>
+<script src="js/rooms.js?v=20260727c"></script>
+<script src="js/chat.js?v=20260727c"></script>
 
 </body>
 </html>
