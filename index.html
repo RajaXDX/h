@@ -15,7 +15,11 @@
 <header>
   <button class="admin-gear" id="adminGearBtn" onclick="openAdmin()" title="لوحة الإدارة">⚙️</button>
   <span id="syncStatus" class="sync-indicator">📴 وضع محلي</span>
-  <h1 class="brand">تحدي <span>رجا</span></h1>
+  <div class="brand-row">
+    <img src="assets/logo.png" alt="شعار تحدي رجا" class="brand-logo"
+         onerror="this.style.display='none'">
+    <h1 class="brand">تحدي <span>رجا</span></h1>
+  </div>
   <div class="tag">لعبة أسئلة وأجوبة جماعية ذكية</div>
 </header>
 <div class="sadu-strip"></div>
@@ -170,7 +174,7 @@
   <div class="cat-grid" id="catGrid"></div>
   <div class="selection-status" id="selStatus"></div>
   <div class="nav-buttons">
-    <button class="btn-main btn-ghost" onclick="goToSetup()">← رجوع</button>
+    <button class="btn-main btn-ghost" onclick="backFromCategories()">← رجوع</button>
     <button class="btn-main btn-primary" id="startBtn" onclick="startGame()" disabled>ابدأ اللعبة 🎮</button>
   </div>
 </div>
@@ -254,6 +258,11 @@
       <h3>حالة المزامنة السحابية</h3>
       <div id="syncInfo" style="padding: 20px; background: rgba(0,0,0,.2); border-radius: 10px;">
         <p>جاري التحميل...</p>
+      </div>
+      <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.2);">
+        <h4 style="margin: 0 0 12px 0;">📚 بنك الأسئلة</h4>
+        <button class="btn btn-answer" onclick="reloadQuestionBank()" style="width: 100%;">إعادة تحميل الأسئلة من ملفات المشروع</button>
+        <p style="font-size: 12px; color: #999; margin-top: 8px;">يضيف أي أسئلة جديدة بدون حذف الأسئلة المضافة يدوياً</p>
       </div>
       <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.2);">
         <h4 style="margin: 0 0 12px 0;">🗑️ تنظيف البيانات</h4>

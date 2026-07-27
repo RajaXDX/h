@@ -95,6 +95,22 @@ header {
   padding: 5px 12px;
 }
 
+.brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(8px, 2vw, 16px);
+  flex-wrap: nowrap;
+}
+
+.brand-logo {
+  height: clamp(46px, 9vw, 76px);
+  width: auto;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.35));
+}
+
 .brand {
   font-family: 'Cairo', sans-serif;
   font-weight: 900;

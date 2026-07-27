@@ -564,41 +564,111 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   updateTotalStats();
-  bootstrapQuestionBankIfEmpty();
+  syncBundledQuestionBank();
 });
 
-// يحمّل بنك الأسئلة الافتراضي من data/questions*.json
-// فقط إذا كان البنك المحلي (localStorage/السحابة) فارغاً بعد، حتى لا يطغى على بيانات حقيقية
-async function bootstrapQuestionBankIfEmpty() {
-  if (Object.keys(QBANK).length > 0) return;
+/* ============================= QUESTION BANK LOADING ============================= */
 
-  try {
-    const files = [
-      'data/questions.json',
-      'data/questions-part2.json',
-      'data/questions-part3.json',
-      'data/questions-part2-continued.json'
-    ];
+const QBANK_FILES = [
+  'data/questions.json',
+  'data/questions-part2.json',
+  'data/questions-part3.json',
+  'data/questions-part2-continued.json'
+];
 
-    const responses = await Promise.all(files.map(f => fetch(f).catch(() => null)));
-    const dataPromises = responses.map((r, i) => {
-      if (!r || !r.ok) return Promise.resolve({});
-      return r.json().catch(() => ({}));
+// يقرأ كل ملفات الأسئلة المرفقة مع المشروع (يتجاوز أي ملف ناقص بدل ما يفشل كلياً)
+async function fetchBundledQuestionFiles() {
+  const results = await Promise.all(QBANK_FILES.map(async (path) => {
+    try {
+      const res = await fetch(path, { cache: 'no-cache' });
+      if (!res.ok) return {};
+      const data = await res.json();
+      return (data && typeof data === 'object') ? data : {};
+    } catch (e) {
+      console.warn(`تعذّر قراءة ${path}:`, e);
+      return {};
+    }
+  }));
+  return results;
+}
+
+// يدمج أسئلة جديدة داخل البنك بدون حذف أي سؤال مضاف يدوياً،
+// ويتجاهل السؤال إذا كان نصه موجوداً مسبقاً في نفس الفئة والمستوى
+function mergeIntoQuestionBank(bank, incoming) {
+  let added = 0;
+
+  Object.keys(incoming).forEach(cat => {
+    const src = incoming[cat];
+    if (!src || typeof src !== 'object') return;
+
+    if (!bank[cat] || typeof bank[cat] !== 'object') {
+      bank[cat] = { easy: [], medium: [], hard: [] };
+    }
+
+    ['easy', 'medium', 'hard'].forEach(diff => {
+      if (!Array.isArray(bank[cat][diff])) bank[cat][diff] = [];
+      const incomingList = Array.isArray(src[diff]) ? src[diff] : [];
+
+      const seen = new Set(bank[cat][diff].map(q => String(q?.question || '').trim()));
+      incomingList.forEach(q => {
+        const text = String(q?.question || '').trim();
+        if (!text || seen.has(text)) return;
+        bank[cat][diff].push(q);
+        seen.add(text);
+        added++;
+      });
     });
-    const allData = await Promise.all(dataPromises);
+  });
 
-    if (Object.keys(QBANK).length > 0) return; // تجنّب سباق مع سحب بيانات حقيقية من السحابة
+  return added;
+}
 
-    // دمج جميع البيانات
-    QBANK = allData.reduce((acc, data) => ({ ...acc, ...data }), {});
-    saveJSON('mr_bank', QBANK);
+// يضمن أن كل فئة موجودة في البنك تظهر أيضاً في قائمة الفئات
+function syncCategoriesWithBank() {
+  let added = 0;
+  Object.keys(QBANK).forEach(name => {
+    if (CATEGORIES.some(c => c.name === name)) return;
+    const known = DEFAULT_CATEGORIES.find(c => c.name === name);
+    CATEGORIES.push(known ? { ...known } : { name, ic: '✨' });
+    added++;
+  });
+  return added;
+}
+
+// يحمّل ملفات الأسئلة ويدمجها في البنك الحالي.
+// يعمل في كل تشغيل (وليس فقط عند بنك فارغ) حتى تصل الأسئلة الجديدة
+// للمتصفحات التي عندها نسخة قديمة محفوظة في localStorage أو السحابة.
+async function syncBundledQuestionBank() {
+  try {
+    const files = await fetchBundledQuestionFiles();
+    let added = 0;
+    files.forEach(data => { added += mergeIntoQuestionBank(QBANK, data); });
+
+    const newCats = syncCategoriesWithBank();
+
+    if (added > 0 || newCats > 0) {
+      saveJSON('mr_bank', QBANK);
+      saveJSON('mr_categories', CATEGORIES);
+    }
+
     updateTotalStats();
 
     if (document.querySelector('#screen-categories.active')) {
       renderCatGrid();
     }
+    if (document.querySelector('#screen-admin.active')) {
+      populateBankCatSelect?.();
+      renderBankList?.();
+    }
+
+    if (added > 0) {
+      log(`📚 تم تحميل ${added} سؤال جديد من ملفات المشروع`, 'success');
+    }
+
+    return added;
   } catch (error) {
-    console.warn('تعذّر تحميل بنك الأسئلة الافتراضي:', error);
+    console.warn('تعذّر تحميل بنك الأسئلة:', error);
+    return 0;
   }
 }
 
@@ -628,6 +698,17 @@ async function pushToCloud() {
 function goToModeSelect() {
   Sound.click();
   showScreen('screen-mode-select');
+}
+
+// الرجوع من شاشة الفئات: في الأونلاين نعود لإعدادات الروم، وفي المحلي لإعداد الفرق
+function backFromCategories() {
+  Sound.click();
+  if (currentRoom) {
+    showScreen('screen-room-setup');
+    updateRoomSetupDisplay();
+  } else {
+    goToSetup();
+  }
 }
 
 function startLocalMode() {

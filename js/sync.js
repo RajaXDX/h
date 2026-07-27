@@ -106,9 +106,13 @@ async function pullFromCloudOnce() {
       .eq('id', 'question_bank')
       .single();
 
+    // ندمج بيانات السحابة داخل البنك الحالي بدل استبداله،
+    // حتى لا تمحو نسخة سحابية قديمة الأسئلة المحمّلة من ملفات المشروع
     if (!bankError && bankData?.data && Object.keys(bankData.data).length > 0) {
-      QBANK = bankData.data;
+      mergeIntoQuestionBank(QBANK, bankData.data);
+      syncCategoriesWithBank();
       saveJSON('mr_bank', QBANK);
+      saveJSON('mr_categories', CATEGORIES);
     }
 
     setSyncStatus('synced');
@@ -157,8 +161,10 @@ function listenToCloudChanges() {
 
             case 'question_bank':
               if (data && Object.keys(data).length > 0) {
-                QBANK = data;
+                mergeIntoQuestionBank(QBANK, data);
+                syncCategoriesWithBank();
                 saveJSON('mr_bank', QBANK);
+                saveJSON('mr_categories', CATEGORIES);
                 updateTotalStats();
               }
               break;
@@ -187,6 +193,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (supa) {
     // جلب البيانات الأولية
     await pullFromCloudOnce();
+
+    // بعد سحب السحابة نعيد دمج ملفات المشروع حتى لا تضيع الأسئلة الجديدة
+    // إذا وصلت بيانات السحابة بعد التحميل الأولي
+    await syncBundledQuestionBank();
 
     // بدء الاستماع للتغييرات
     listenToCloudChanges();

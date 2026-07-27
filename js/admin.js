@@ -489,6 +489,35 @@ function formatBytes(bytes) {
   return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
 
+/* ============================= RELOAD QUESTION BANK ============================= */
+
+async function reloadQuestionBank() {
+  const before = countBankQuestions();
+  const added = await syncBundledQuestionBank();
+  const after = countBankQuestions();
+
+  populateBankCatSelect();
+  renderBankList();
+  renderAdminCategories();
+  updateSyncInfo();
+
+  if (added > 0) {
+    alert(`✅ تم تحميل ${added} سؤال جديد\n\nالمجموع الآن: ${after} سؤال (كان ${before})`);
+  } else {
+    alert(`ℹ️ بنك الأسئلة محدّث بالفعل — ${after} سؤال`);
+  }
+}
+
+function countBankQuestions() {
+  let total = 0;
+  Object.values(QBANK).forEach(c => {
+    ['easy', 'medium', 'hard'].forEach(k => {
+      total += (c[k] || []).length;
+    });
+  });
+  return total;
+}
+
 /* ============================= CLEANUP ROOMS ============================= */
 
 async function cleanupOldRooms() {
