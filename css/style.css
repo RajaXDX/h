@@ -1376,13 +1376,40 @@ footer p {
   bottom: 20px;
 }
 
-.chat-panel .chat-header {
+.chat-panel-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 12px;
   border-bottom: 1px solid var(--gold);
   background: rgba(212, 175, 55, 0.1);
+  border-radius: 10px 10px 0 0;
+  flex: 0 0 auto;
+}
+
+/* الزر العائم لفتح الشات */
+.chat-fab {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid var(--gold);
+  background: var(--bg);
+  color: var(--gold);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  z-index: 99;
+}
+
+.chat-fab.hidden {
+  display: none !important;
 }
 
 .chat-panel h3 {
@@ -1415,9 +1442,11 @@ footer p {
   border-left: 2px solid var(--gold);
 }
 
-.chat-header {
+.chat-msg-header {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
   font-size: 12px;
   margin-bottom: 4px;
 }
@@ -1538,17 +1567,31 @@ footer p {
     gap: 15px;
   }
 
+  /* الشات على الجوال: لوحة سفلية (bottom sheet) بعرض الشاشة كامل */
   .chat-panel {
-    width: calc(100% - 20px);
-    right: 10px;
-    left: 10px;
-    height: 40vh;
+    width: 100%;
+    right: 0;
+    left: 0;
+    height: 60vh;
     max-height: 60vh;
-    bottom: -500px;
+    bottom: -100vh;
+    border-width: 2px 0 0 0;
+    border-radius: 14px 14px 0 0;
   }
 
   .chat-panel.open {
-    bottom: 10px;
+    bottom: 0;
+  }
+
+  .chat-panel-header {
+    border-radius: 12px 12px 0 0;
+  }
+
+  .chat-fab {
+    bottom: 16px;
+    left: 16px;
+    width: 48px;
+    height: 48px;
   }
 
   .room-code-join {
@@ -1592,19 +1635,27 @@ footer p {
     width: 100%;
   }
 
+  /* الحقل والزر بجانب بعض حتى لا يأخذان مساحة عمودية زائدة */
   .chat-input-area {
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
   }
 
   .chat-input {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
+    font-size: 16px; /* يمنع iOS من تكبير الصفحة عند التركيز */
   }
 
   .chat-send-btn {
-    width: 100%;
+    flex: 0 0 auto;
+    width: auto;
+    padding: 10px 16px;
   }
 
   .chat-messages {
-    max-height: 200px;
+    flex: 1;
+    max-height: none;
   }
 }

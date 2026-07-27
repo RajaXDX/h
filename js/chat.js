@@ -123,8 +123,11 @@ function renderChatMessages() {
   chatContainer.innerHTML = '';
 
   roomChatMessages.forEach(msg => {
-    const messageEl = createElement('div', { class: 'chat-message' }, `
-      <div class="chat-header">
+    const messageEl = createElement('div', {
+      class: 'chat-message',
+      'data-msg-id': msg.id || ''
+    }, `
+      <div class="chat-msg-header">
         <span class="chat-sender">${escapeHtml(msg.player_name)}</span>
         <span class="chat-time">${formatTime(msg.created_at)}</span>
       </div>
@@ -151,28 +154,37 @@ function renderChatMessages() {
 /* ============================= TOGGLE CHAT ============================= */
 
 function toggleChat() {
-  const chatPanel = document.getElementById('chatPanel');
+  let chatPanel = document.getElementById('chatPanel');
   if (!chatPanel) {
     createChatPanel();
-    return;
+    chatPanel = document.getElementById('chatPanel');
+    if (!chatPanel) return;
   }
 
   chatOpen = !chatOpen;
+  const fab = document.getElementById('chatFab');
+
   if (chatOpen) {
     chatPanel.classList.add('open');
-    const input = document.getElementById('chatInput');
-    if (input) input.focus();
+    if (fab) fab.classList.add('hidden');
+    // لا نركّز على الحقل في الجوال حتى لا تقفز لوحة المفاتيح فوق المحتوى
+    if (window.innerWidth > 768) {
+      document.getElementById('chatInput')?.focus();
+    }
   } else {
     chatPanel.classList.remove('open');
+    if (fab) fab.classList.remove('hidden');
   }
 }
 
 /* ============================= CREATE CHAT PANEL ============================= */
 
 function createChatPanel() {
-  if (!document.getElementById('chatPanel')) {
+  const isNew = !document.getElementById('chatPanel');
+
+  if (isNew) {
     const panel = createElement('div', { id: 'chatPanel', class: 'chat-panel' }, `
-      <div class="chat-header">
+      <div class="chat-panel-header">
         <h3>💬 الشات</h3>
         <button class="chat-close" onclick="toggleChat()">✕</button>
       </div>
@@ -221,10 +233,43 @@ function createChatPanel() {
       chatSendBtn.addEventListener('click', sendMsg);
     }
 
+    createChatToggleButton();
     loadChatMessages();
   }
 
-  toggleChat();
+  // اللوحة تبدأ مغلقة حتى لا تغطي محتوى الشاشة (خصوصاً على الجوال)
+  // الفتح يتم بالضغط على الزر العائم 💬
+  const fab = document.getElementById('chatFab');
+  if (fab) {
+    fab.classList.remove('hidden');
+    fab.style.display = 'flex';
+  }
+}
+
+/* ============================= CHAT TOGGLE BUTTON (FAB) ============================= */
+
+function createChatToggleButton() {
+  if (document.getElementById('chatFab')) return;
+
+  const fab = createElement('button', {
+    id: 'chatFab',
+    class: 'chat-fab',
+    title: 'الشات'
+  }, '💬');
+
+  fab.onclick = () => toggleChat();
+  document.body.appendChild(fab);
+}
+
+function hideChatUI() {
+  const panel = document.getElementById('chatPanel');
+  const fab = document.getElementById('chatFab');
+  if (panel) panel.classList.remove('open');
+  if (fab) {
+    fab.classList.remove('hidden');
+    fab.style.display = 'none';
+  }
+  chatOpen = false;
 }
 
 /* ============================= EMOJI PICKER (بسيط) ============================= */

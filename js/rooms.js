@@ -82,7 +82,6 @@ async function createRoom(roomName, mode = 'online') {
 
     log(`✅ تم إنشاء روم جديدة: ${roomCode}`, 'success');
     subscribeToRoom(roomData.id);
-    listenToRoomUpdates(roomData.id);
 
     return roomData;
   } catch (error) {
@@ -147,7 +146,6 @@ async function joinRoom(roomCode, playerName) {
 
     log(`✅ دخلت إلى الروم: ${roomCode}`, 'success');
     subscribeToRoom(roomData.id);
-    listenToRoomUpdates(roomData.id);
 
     return true;
   } catch (error) {
@@ -172,6 +170,9 @@ async function leaveRoom() {
 
     // إلغاء الاشتراكات
     unsubscribeFromRoom();
+
+    // إخفاء واجهة الشات عند الخروج
+    if (typeof hideChatUI === 'function') hideChatUI();
 
     currentRoom = null;
     currentPlayer = null;
@@ -315,7 +316,10 @@ function subscribeToRoom(roomId) {
           filter: `room_id=eq.${roomId}`
         },
         (payload) => {
-          roomChatMessages.push(payload.new);
+          // لا نضيف الرسالة مرتين للذاكرة (حتى لا تتكرر عند إعادة الرسم)
+          if (!roomChatMessages.some(m => m.id === payload.new.id)) {
+            roomChatMessages.push(payload.new);
+          }
           displayChatMessage(payload.new);
           Sound.open();
         }
@@ -436,8 +440,18 @@ function displayChatMessage(message) {
   const chatContainer = document.getElementById('roomChatMessages');
   if (!chatContainer) return;
 
-  const messageEl = createElement('div', { class: 'chat-message' }, `
-    <div class="chat-sender">${message.player_name}</div>
+  // منع تكرار نفس الرسالة إذا وصل الحدث أكثر من مرة
+  if (message.id && chatContainer.querySelector(`[data-msg-id="${message.id}"]`)) {
+    return;
+  }
+
+  const messageEl = createElement('div', {
+    class: 'chat-message',
+    'data-msg-id': message.id || ''
+  }, `
+    <div class="chat-msg-header">
+      <span class="chat-sender">${escapeHtml(message.player_name)}</span>
+    </div>
     <div class="chat-text">${escapeHtml(message.message)}</div>
     ${message.reactions && Object.keys(message.reactions).length > 0 ? `
       <div class="chat-reactions">
