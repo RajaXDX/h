@@ -27,9 +27,16 @@ DROP POLICY IF EXISTS "allow_public_write_game_settings" ON game_settings;
 DROP POLICY IF EXISTS "allow_public_insert_game_settings" ON game_settings;
 DROP POLICY IF EXISTS "allow_public_update_game_settings" ON game_settings;
 DROP POLICY IF EXISTS "allow_public_delete_game_settings" ON game_settings;
+DROP POLICY IF EXISTS "allow_public_read_game_settings" ON game_settings;
+
+-- وحذف سياسات هذا الملف نفسه، حتى يمكن تشغيله أكثر من مرة بدون خطأ
+-- (بدون هذه الأسطر يفشل التشغيل الثاني بـ: policy ... already exists)
+DROP POLICY IF EXISTS "read_settings_public" ON game_settings;
+DROP POLICY IF EXISTS "insert_settings_authenticated" ON game_settings;
+DROP POLICY IF EXISTS "update_settings_authenticated" ON game_settings;
+DROP POLICY IF EXISTS "delete_settings_authenticated" ON game_settings;
 
 -- القراءة تبقى مفتوحة: اللاعبون يحتاجون الفئات وبنك الأسئلة بدون تسجيل دخول
-DROP POLICY IF EXISTS "allow_public_read_game_settings" ON game_settings;
 CREATE POLICY "read_settings_public" ON game_settings
   FOR SELECT
   USING (true);
