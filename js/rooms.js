@@ -81,6 +81,7 @@ async function createRoom(roomName, mode = 'online') {
     if (stateError) throw stateError;
 
     log(`✅ تم إنشاء روم جديدة: ${roomCode}`, 'success');
+    saveRoomSession();
     subscribeToRoom(roomData.id);
 
     return roomData;
@@ -100,57 +101,175 @@ async function joinRoom(roomCode, playerName) {
   }
 
   try {
-    // البحث عن الروم بالكود
+    // نبحث بالكود فقط بدون تقييد الحالة، حتى يستطيع من انقطع اتصاله أو حدّث
+    // الصفحة أن يعود إلى روم بدأت اللعب فيها بالفعل
     const { data: roomData, error: roomError } = await supa
       .from('game_rooms')
       .select('*')
       .eq('code', roomCode.toUpperCase())
-      .eq('status', 'waiting')
       .single();
 
-    if (roomError) {
-      alert('❌ الروم غير موجود أو مغلقة');
-      return false;
-    }
-
-    if (!roomData) {
+    if (roomError || !roomData) {
       alert('❌ الروم غير موجود');
       return false;
     }
 
-    const playerId = generateId();
-    currentRoom = roomData;
-    currentPlayer = {
-      id: playerId,
-      name: playerName,
-      player_id: playerId,
-      device_id: getDeviceId(),
-      team: null,
-      is_host: false,
-      score: 0
-    };
+    if (roomData.status === 'completed') {
+      alert('❌ هذه الروم انتهت');
+      return false;
+    }
 
-    // إضافة اللاعب
-    const { error: playerError } = await supa
+    const deviceId = getDeviceId();
+
+    // هل لهذا الجهاز مقعد سابق في الروم؟
+    const { data: previous } = await supa
       .from('room_players')
-      .insert({
-        room_id: roomData.id,
+      .select('*')
+      .eq('room_id', roomData.id)
+      .eq('device_id', deviceId)
+      .order('joined_at', { ascending: false })
+      .limit(1);
+
+    const seat = previous?.[0];
+
+    // المطرود لا يعود
+    if (seat?.status === 'kicked') {
+      alert('❌ تم إخراجك من هذه الروم');
+      return false;
+    }
+
+    // اللعبة بدأت ولا يوجد مقعد سابق → لاعب جديد لا يستطيع الدخول وسط جولة
+    if (roomData.status === 'active' && !seat) {
+      alert('❌ اللعبة بدأت بالفعل، لا يمكن الانضمام الآن');
+      return false;
+    }
+
+    currentRoom = roomData;
+
+    if (seat) {
+      // استعادة المقعد نفسه بفريقه ونقاطه
+      currentPlayer = {
+        id: seat.player_id,
+        name: seat.player_name,
+        player_id: seat.player_id,
+        device_id: deviceId,
+        team: seat.team,
+        is_host: seat.is_host,
+        score: seat.score || 0
+      };
+
+      await supa
+        .from('room_players')
+        .update({ status: 'active', player_name: playerName || seat.player_name })
+        .eq('room_id', roomData.id)
+        .eq('player_id', seat.player_id);
+
+      log(`✅ رجعت إلى الروم: ${roomCode}`, 'success');
+    } else {
+      const playerId = generateId();
+      currentPlayer = {
+        id: playerId,
+        name: playerName,
         player_id: playerId,
-        player_name: playerName,
-        device_id: currentPlayer.device_id,
+        device_id: deviceId,
+        team: null,
         is_host: false,
-        status: 'active'
-      });
+        score: 0
+      };
 
-    if (playerError) throw playerError;
+      const { error: playerError } = await supa
+        .from('room_players')
+        .insert({
+          room_id: roomData.id,
+          player_id: playerId,
+          player_name: playerName,
+          device_id: deviceId,
+          is_host: false,
+          status: 'active'
+        });
 
-    log(`✅ دخلت إلى الروم: ${roomCode}`, 'success');
+      if (playerError) throw playerError;
+      log(`✅ دخلت إلى الروم: ${roomCode}`, 'success');
+    }
+
+    saveRoomSession();
     subscribeToRoom(roomData.id);
 
     return true;
   } catch (error) {
     console.error('Join room error:', error);
     log(`❌ خطأ في دخول الروم: ${error.message}`, 'error');
+    return false;
+  }
+}
+
+/* ============================= SESSION PERSISTENCE ============================= */
+
+// نحفظ هوية الجلسة حتى يعود اللاعب تلقائياً بعد تحديث الصفحة أو انقطاع الشبكة
+const ROOM_SESSION_KEY = 'mr_room_session';
+
+function saveRoomSession() {
+  if (!currentRoom || !currentPlayer) return;
+  saveJSON(ROOM_SESSION_KEY, {
+    roomCode: currentRoom.code,
+    playerName: currentPlayer.name,
+    savedAt: Date.now()
+  });
+}
+
+function clearRoomSession() {
+  try { localStorage.removeItem(ROOM_SESSION_KEY); } catch (e) { /* تجاهل */ }
+}
+
+// تُستدعى عند تحميل الصفحة: ترجع اللاعب لرومه إن كانت ما زالت قائمة
+async function restoreRoomSession() {
+  if (!supa) return false;
+
+  const saved = loadJSON(ROOM_SESSION_KEY, null);
+  if (!saved?.roomCode) return false;
+
+  // جلسة أقدم من 6 ساعات نعتبرها منتهية
+  if (Date.now() - (saved.savedAt || 0) > 6 * 60 * 60 * 1000) {
+    clearRoomSession();
+    return false;
+  }
+
+  const ok = await joinRoom(saved.roomCode, saved.playerName);
+  if (!ok) {
+    clearRoomSession();
+    return false;
+  }
+
+  await getRoomPlayers();
+
+  // إن كانت اللعبة جارية نرجعه للوحة مباشرة، لا لشاشة الانتظار
+  const resumed = await fetchAndApplyGameState();
+  if (!resumed) goToRoomSetup();
+
+  log('🔄 تمت العودة إلى الروم السابقة', 'success');
+  return true;
+}
+
+// يجلب آخر حالة لعبة محفوظة للروم ويطبّقها (للاعب العائد وسط جولة)
+async function fetchAndApplyGameState() {
+  if (!supa || !currentRoom) return false;
+
+  try {
+    const { data, error } = await supa
+      .from('room_game_state')
+      .select('state_data')
+      .eq('room_id', currentRoom.id)
+      .single();
+
+    if (error || !data?.state_data) return false;
+
+    const state = data.state_data;
+    if (state.phase !== 'playing' && state.phase !== 'ended') return false;
+
+    applyRemoteGameState(state);
+    return true;
+  } catch (e) {
+    console.warn('تعذّر جلب حالة اللعبة:', e);
     return false;
   }
 }
@@ -173,6 +292,9 @@ async function leaveRoom() {
 
     // إخفاء واجهة الشات عند الخروج
     if (typeof hideChatUI === 'function') hideChatUI();
+
+    // خروج مقصود → لا نعيده تلقائياً عند التحديث
+    clearRoomSession();
 
     currentRoom = null;
     currentPlayer = null;
@@ -273,6 +395,9 @@ async function kickPlayer(playerId, playerName) {
 async function handleKickedOut() {
   unsubscribeFromRoom();
   if (typeof hideChatUI === 'function') hideChatUI();
+
+  // المطرود لا يُعاد تلقائياً عند تحديث الصفحة
+  clearRoomSession();
 
   currentRoom = null;
   currentPlayer = null;

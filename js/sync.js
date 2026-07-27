@@ -209,6 +209,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // بدء الاستماع للتغييرات
     listenToCloudChanges();
+
+    // إعادة اللاعب لرومه إن كان قد حدّث الصفحة أو انقطع اتصاله
+    try {
+      await restoreRoomSession();
+    } catch (e) {
+      console.warn('تعذّرت العودة للروم السابقة:', e);
+    }
   }
 
   updateTotalStats();
