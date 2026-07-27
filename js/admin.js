@@ -5,16 +5,76 @@ let adminReturnScreen = 'screen-home';
 // متغير عام للتحقق من أن الإدمن مسجل دخول
 let isAdminLoggedIn = false;
 
-function openAdmin() {
-  Sound.select();
-  const entered = prompt('أدخل رمز لوحة الإدارة:');
-  if (entered === null) return;
+/* ============================= ADMIN AUTHENTICATION ============================= */
 
-  if (trimArabic(entered) !== ADMIN_PIN) {
-    alert('❌ رمز غير صحيح - الوصول مرفوض');
-    isAdminLoggedIn = false;
-    return;
+// التحقق من هوية الإدمن.
+//
+// لماذا لم نعد نعتمد على رمز داخل الكود:
+// أي رمز مكتوب في ملفات JS يقدر أي زائر يقرأه من مصدر الصفحة، وبما أن لوحة
+// الإدارة تكتب في السحابة (game_settings) فإن ذلك يعني أن أي شخص يقدر يغيّر
+// بيانات كل اللاعبين. لذلك صار التحقق عبر Supabase Auth، والصلاحية تُفرض
+// في قاعدة البيانات نفسها عبر RLS لا في المتصفح.
+//
+// بدون اتصال بالسحابة (تشغيل محلي) نسمح بالرمز، لأن التعديل حينها لا يخرج
+// من الجهاز ولا يؤثر على أحد.
+async function authenticateAdmin() {
+  // وضع محلي بحت: لا سحابة = لا ضرر على الآخرين
+  if (!supa) {
+    const entered = prompt('وضع محلي (بدون سحابة).\nأدخل رمز لوحة الإدارة:');
+    if (entered === null) return false;
+    if (trimArabic(entered) !== ADMIN_PIN) {
+      alert('❌ رمز غير صحيح');
+      return false;
+    }
+    return true;
   }
+
+  // جلسة سابقة ما زالت صالحة؟
+  try {
+    const { data: { session } } = await supa.auth.getSession();
+    if (session) return true;
+  } catch (e) {
+    console.warn('تعذّر قراءة الجلسة:', e);
+  }
+
+  const email = prompt('بريد حساب الإدارة:');
+  if (email === null) return false;
+
+  const password = prompt('كلمة المرور:');
+  if (password === null) return false;
+
+  try {
+    const { error } = await supa.auth.signInWithPassword({
+      email: email.trim(),
+      password
+    });
+
+    if (error) {
+      alert('❌ بيانات الدخول غير صحيحة');
+      log(`فشل دخول الإدارة: ${error.message}`, 'error');
+      return false;
+    }
+
+    return true;
+  } catch (e) {
+    alert('❌ تعذّر الاتصال بخدمة الدخول');
+    console.error(e);
+    return false;
+  }
+}
+
+async function adminSignOut() {
+  if (supa) {
+    try { await supa.auth.signOut(); } catch (e) { console.warn(e); }
+  }
+  isAdminLoggedIn = false;
+}
+
+async function openAdmin() {
+  Sound.select();
+
+  const ok = await authenticateAdmin();
+  if (!ok) return;
 
   isAdminLoggedIn = true;
   log('✅ الإدمن دخل بنجاح', 'success');
@@ -28,7 +88,7 @@ function openAdmin() {
 
 function closeAdmin() {
   Sound.click();
-  isAdminLoggedIn = false; // تسجيل الخروج من الإدارة
+  adminSignOut(); // إنهاء جلسة الإدارة في السحابة أيضاً
   showScreen(adminReturnScreen);
   if (adminReturnScreen === 'screen-categories') {
     renderCatGrid();

@@ -1,6 +1,9 @@
 /* ============================= GAME STATE ============================= */
 
 // الثوابت
+// ملاحظة: هذا الرمز يعمل فقط في التشغيل المحلي بدون سحابة، حيث لا يؤثر التعديل
+// على أحد. مع وجود Supabase يكون الدخول ببريد وكلمة مرور عبر Supabase Auth،
+// والصلاحية مفروضة في قاعدة البيانات (راجع supabase-admin-security.sql).
 const ADMIN_PIN = '2014';
 const LIFELINES = [
   { key: 'fakh', name: 'الفخ', ic: '🪤' },
@@ -187,14 +190,9 @@ function toggleCategory(c, card) {
   updateSelStatus();
 }
 
-function addCustomCategory() {
-  // ⚠️ حماية أمنية: فقط الإدمن يستطيع إضافة فئات مخصصة
-  const entered = prompt('الفئات المخصصة متاحة للإدمن فقط.\nأدخل رمز لوحة الإدارة:');
-  if (entered === null) return;
-  if (trimArabic(entered) !== ADMIN_PIN) {
-    alert('رمز غير صحيح - الوصول مرفوض');
-    return;
-  }
+async function addCustomCategory() {
+  // ⚠️ للإدمن فقط — نفس تحقق لوحة الإدارة
+  if (!(await authenticateAdmin())) return;
 
   const input = document.getElementById('customCatName');
   const name = trimArabic(input.value);
@@ -567,14 +565,9 @@ function showQuickAddForm(cat, row, ci) {
   document.getElementById('answerCorner').style.visibility = 'hidden';
 }
 
-function quickAddAndShow(ci, row) {
-  // ⚠️ حماية أمنية: فقط الإدمن يمكنه إضافة أسئلة سريعة
-  const entered = prompt('إضافة أسئلة سريعة متاحة للإدمن فقط.\nأدخل رمز لوحة الإدارة:');
-  if (entered === null) return;
-  if (trimArabic(entered) !== ADMIN_PIN) {
-    alert('رمز غير صحيح - الوصول مرفوض');
-    return;
-  }
+async function quickAddAndShow(ci, row) {
+  // ⚠️ للإدمن فقط — نفس تحقق لوحة الإدارة
+  if (!(await authenticateAdmin())) return;
 
   const cat = rounds[activeRound][ci];
   const q = document.getElementById('quickQText')?.value?.trim();
@@ -962,6 +955,15 @@ function updateTotalStats() {
 
   const footerEl = document.getElementById('footerStats');
   if (footerEl) footerEl.textContent = total;
+
+  // عدد الفئات يُحسب من البيانات الفعلية بدل رقم مكتوب يدوياً في HTML
+  const catsEl = document.getElementById('totalCategories');
+  if (catsEl) {
+    const withQuestions = Object.values(QBANK).filter(c =>
+      ['easy', 'medium', 'hard'].some(k => (c[k] || []).length > 0)
+    ).length;
+    catsEl.textContent = withQuestions || CATEGORIES.length;
+  }
 }
 
 // دالة للمزامنة السحابية

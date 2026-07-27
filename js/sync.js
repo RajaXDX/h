@@ -2,6 +2,25 @@
 
 let syncSubscription = null;
 
+// تدمج فئات السحابة مع الفئات المحلية بدل استبدالها.
+// السبب: كانت السحابة تكتب فوق القائمة بالكامل، فأي شخص يصل للوحة الإدارة
+// (ورمزها كان مكشوفاً في الكود) يقدر يمسح فئات كل اللاعبين لحظياً.
+// الدمج يعني أن الحذف لا ينتشر، وأقصى ما يحدث هو إضافة فئات جديدة.
+function mergeCategories(incoming) {
+  if (!Array.isArray(incoming)) return 0;
+
+  let added = 0;
+  incoming.forEach(cat => {
+    const name = (cat?.name || '').trim();
+    if (!name) return;
+    if (CATEGORIES.some(c => c.name === name)) return;
+    CATEGORIES.push({ name, ic: cat.ic || '✨' });
+    added++;
+  });
+
+  return added;
+}
+
 // دالة المزامنة الرئيسية
 async function pushToCloud() {
   if (!supa) {
@@ -87,7 +106,7 @@ async function pullFromCloudOnce() {
     ]);
 
     if (!catError && Array.isArray(catData?.data) && catData.data.length > 0) {
-      CATEGORIES = catData.data;
+      mergeCategories(catData.data);
       saveJSON('mr_categories', CATEGORIES);
     }
 
@@ -131,7 +150,7 @@ function listenToCloudChanges() {
           switch (id) {
             case 'categories':
               if (Array.isArray(data) && data.length > 0) {
-                CATEGORIES = data;
+                mergeCategories(data);
                 saveJSON('mr_categories', CATEGORIES);
                 if (document.querySelector('#screen-categories.active')) {
                   renderCatGrid();
