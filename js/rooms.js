@@ -595,6 +595,7 @@ function subscribeToRoom(roomId) {
             roomChatMessages.push(payload.new);
           }
           displayChatMessage(payload.new);
+          noteIncomingMessage(payload.new);
           Sound.open();
         }
       )
@@ -693,11 +694,13 @@ function updatePlayersList() {
     }
     document.getElementById('playersReadyUI').style.display = 'block';
     document.getElementById('teamDistributionUI').style.display = 'none';
+    updateStartGateUI();
   } else {
     // واجهة التوزيع للـ Host فقط
     const distUI = document.getElementById('teamDistributionUI');
     if (distUI) distUI.style.display = 'block';
     document.getElementById('playersReadyUI').style.display = 'none';
+    updateStartGateUI();
 
     const playersList = document.getElementById('roomPlayersList');
     if (playersList) {
@@ -754,3 +757,33 @@ function displayChatMessage(message) {
 
 // ملاحظة: escapeHtml انتقلت إلى js/utils.js — فهي أداة عامة، و utils.js
 // يُحمَّل أولاً ويستخدمها بنفسه في نوافذ الحوار.
+
+/* ============================= START BUTTON GATE ============================= */
+
+// يحدّث زر «ابدأ اللعبة» وسببَ تعطيله. الشروط نفسها المفروضة في
+// startGameOnline() — هذه للتوضيح البصري لا للأمان.
+function updateStartGateUI() {
+  const btn = document.getElementById('startGameBtn');
+  const hint = document.getElementById('startGateHint');
+  if (!btn) return;
+
+  if (!currentPlayer?.is_host) {
+    btn.style.display = 'none';
+    if (hint) hint.textContent = '';
+    return;
+  }
+
+  btn.style.display = '';
+
+  const withoutTeam = roomPlayers.filter(p => !p.team);
+  const teamA = roomPlayers.filter(p => p.team === 'A');
+  const teamB = roomPlayers.filter(p => p.team === 'B');
+
+  let reason = '';
+  if (roomPlayers.length < 2) reason = '⏳ بانتظار دخول لاعب آخر';
+  else if (withoutTeam.length) reason = `⏳ وزّع: ${withoutTeam.map(p => p.player_name).join('، ')}`;
+  else if (!teamA.length || !teamB.length) reason = '⏳ كل فريق يحتاج لاعباً واحداً على الأقل';
+
+  btn.disabled = !!reason;
+  if (hint) hint.textContent = reason;
+}

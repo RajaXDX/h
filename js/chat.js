@@ -1,6 +1,43 @@
 /* ============================= CHAT SYSTEM ============================= */
 
 let chatOpen = false;
+let unreadCount = 0;
+
+/* ---- شارة الرسائل غير المقروءة ---- */
+
+function renderUnreadBadge() {
+  // ⚠️ الشارة توضع في الغلاف لا داخل <button>: العناصر المطلقة داخل الأزرار
+  // لا تُحترم أبعادها في بعض المحركات، فكانت الشارة تنكمش إلى 9×9.
+  const wrap = document.getElementById('chatFabWrap');
+  if (!wrap) return;
+
+  let badge = wrap.querySelector('.chat-badge');
+
+  if (unreadCount <= 0) {
+    badge?.remove();
+    return;
+  }
+
+  if (!badge) {
+    badge = createElement('span', { class: 'chat-badge' });
+    wrap.appendChild(badge);
+  }
+  badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
+}
+
+// تُستدعى عند وصول رسالة جديدة. لا نعدّ رسائل الشخص نفسه،
+// ولا نعدّ شيئاً واللوحة مفتوحة أمامه.
+function noteIncomingMessage(message) {
+  if (chatOpen) return;
+  if (message?.player_id && message.player_id === currentPlayer?.player_id) return;
+  unreadCount++;
+  renderUnreadBadge();
+}
+
+function clearUnread() {
+  unreadCount = 0;
+  renderUnreadBadge();
+}
 
 /* ============================= SEND MESSAGE ============================= */
 
@@ -162,18 +199,19 @@ function toggleChat() {
   }
 
   chatOpen = !chatOpen;
-  const fab = document.getElementById('chatFab');
+  const wrap = document.getElementById('chatFabWrap');
 
   if (chatOpen) {
     chatPanel.classList.add('open');
-    if (fab) fab.classList.add('hidden');
+    clearUnread();
+    if (wrap) wrap.classList.add('hidden');
     // لا نركّز على الحقل في الجوال حتى لا تقفز لوحة المفاتيح فوق المحتوى
     if (window.innerWidth > 768) {
       document.getElementById('chatInput')?.focus();
     }
   } else {
     chatPanel.classList.remove('open');
-    if (fab) fab.classList.remove('hidden');
+    if (wrap) wrap.classList.remove('hidden');
   }
 }
 
@@ -239,17 +277,19 @@ function createChatPanel() {
 
   // اللوحة تبدأ مغلقة حتى لا تغطي محتوى الشاشة (خصوصاً على الجوال)
   // الفتح يتم بالضغط على الزر العائم 💬
-  const fab = document.getElementById('chatFab');
-  if (fab) {
-    fab.classList.remove('hidden');
-    fab.style.display = 'flex';
+  const wrap = document.getElementById('chatFabWrap');
+  if (wrap) {
+    wrap.classList.remove('hidden');
+    wrap.style.display = 'block';
   }
 }
 
 /* ============================= CHAT TOGGLE BUTTON (FAB) ============================= */
 
 function createChatToggleButton() {
-  if (document.getElementById('chatFab')) return;
+  if (document.getElementById('chatFabWrap')) return;
+
+  const wrap = createElement('div', { id: 'chatFabWrap', class: 'chat-fab-wrap' });
 
   const fab = createElement('button', {
     id: 'chatFab',
@@ -258,16 +298,19 @@ function createChatToggleButton() {
   }, '💬');
 
   fab.onclick = () => toggleChat();
-  document.body.appendChild(fab);
+  wrap.appendChild(fab);
+  document.body.appendChild(wrap);
 }
 
 function hideChatUI() {
+  unreadCount = 0;
+  renderUnreadBadge();
   const panel = document.getElementById('chatPanel');
-  const fab = document.getElementById('chatFab');
+  const wrap = document.getElementById('chatFabWrap');
   if (panel) panel.classList.remove('open');
-  if (fab) {
-    fab.classList.remove('hidden');
-    fab.style.display = 'none';
+  if (wrap) {
+    wrap.classList.remove('hidden');
+    wrap.style.display = 'none';
   }
   chatOpen = false;
 }

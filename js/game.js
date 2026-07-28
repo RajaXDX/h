@@ -1280,10 +1280,26 @@ async function startGameOnline() {
     return;
   }
 
-  // التحقق من أن جميع اللاعبين لهم فريق
+  // لا بد من لاعب واحد آخر على الأقل — لا معنى لجولة أونلاين بلاعب واحد
+  if (roomPlayers.length < 2) {
+    uiAlert('❌ انتظر دخول لاعب آخر على الأقل قبل البدء');
+    return;
+  }
+
+  // كل اللاعبين لهم فريق
   const playersWithoutTeam = roomPlayers.filter(p => !p.team);
   if (playersWithoutTeam.length > 0) {
-    uiAlert('❌ يجب توزيع جميع اللاعبين على الفرق أولاً');
+    uiAlert(`❌ وزّع كل اللاعبين على الفرق أولاً
+
+بانتظار التوزيع: ${playersWithoutTeam.map(p => p.player_name).join('، ')}`);
+    return;
+  }
+
+  // والفريقان ليسا فارغين
+  const teamA = roomPlayers.filter(p => p.team === 'A');
+  const teamB = roomPlayers.filter(p => p.team === 'B');
+  if (!teamA.length || !teamB.length) {
+    uiAlert('❌ لازم يكون في كل فريق لاعب واحد على الأقل');
     return;
   }
 
