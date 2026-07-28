@@ -255,13 +255,31 @@ async function copyRoomLink() {
   }
 }
 
-// يقرأ ?room=CODE من الرابط ويفتح شاشة الدخول بالكود جاهزاً
-async function handleRoomLinkOnLoad() {
+const PENDING_ROOM_KEY = 'mr_pending_room';
+
+// يُستدعى مبكراً جداً — قبل بوابة الحساب — لأن البوابة قد توقف التنفيذ،
+// وحينها كان كود الروم يضيع فيصل المدعوّ إلى الصفحة الرئيسية بلا روم.
+function stashPendingRoomCode() {
   const code = new URLSearchParams(location.search).get('room');
-  if (!code) return false;
+  if (!code) return;
 
   // ننظّف الرابط حتى لا يتكرر الدخول عند التحديث
   history.replaceState(null, '', location.pathname);
+  try { sessionStorage.setItem(PENDING_ROOM_KEY, code.toUpperCase().trim()); } catch (e) { /* تجاهل */ }
+}
+
+function takePendingRoomCode() {
+  try {
+    const code = sessionStorage.getItem(PENDING_ROOM_KEY);
+    if (code) sessionStorage.removeItem(PENDING_ROOM_KEY);
+    return code;
+  } catch (e) { return null; }
+}
+
+// يفتح شاشة الدخول بالكود جاهزاً إن كان هناك رابط روم محفوظ
+async function handleRoomLinkOnLoad() {
+  const code = takePendingRoomCode();
+  if (!code) return false;
 
   goToRooms();
   const input = document.getElementById('roomCodeInput');

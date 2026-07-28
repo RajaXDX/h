@@ -14,12 +14,11 @@
 
 // بوابة الحساب.
 //
-// تبدأ مطفأة عمداً: تشغيلها قبل إتمام الإعداد في Supabase يمنع **كل** الناس
-// من اللعب، بمن فيهم أنت. شغّلها (true) بعد:
-//   1) تشغيل supabase-accounts.sql
-//   2) تعطيل "Confirm email" من Authentication → Sign In / Providers → Email
-// تركها false يبقي اللعب متاحاً بلا حساب، وهو أقل احتكاكاً عند النشر.
-const REQUIRE_ACCOUNT = false;
+// مشغّلة: لا لعب بلا حساب. تتطلّب أن يكون الإعداد في Supabase مكتملاً —
+//   1) supabase-accounts.sql مُشغَّل
+//   2) "Confirm email" معطّل في Authentication → Sign In / Providers → Email
+// اجعلها false لو أردت إتاحة اللعب بلا حساب (احتكاك أقل عند النشر).
+const REQUIRE_ACCOUNT = true;
 
 const ACCOUNT_EMAIL_DOMAIN = 'raja-players.com';
 
@@ -260,7 +259,10 @@ async function handleAuthSubmit(mode) {
 
   document.getElementById('authPassword').value = '';
   renderAuthState();
-  goToModeSelect();
+
+  // أكمل إلى الروم الذي دُعي إليه إن كان جاء من رابط، وإلا للرئيسية
+  const resumed = await handleRoomLinkOnLoad();
+  if (!resumed) goToModeSelect();
 }
 
 // البوابة عند تحميل الصفحة

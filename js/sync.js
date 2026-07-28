@@ -210,7 +210,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // بدء الاستماع للتغييرات
     listenToCloudChanges();
 
-    // بوابة الحساب أولاً: بلا حساب لا دخول لروم ولا استعادة جلسة
+    // نحفظ كود الروم من الرابط قبل البوابة، وإلا ضاع عند طلب تسجيل الدخول
+    stashPendingRoomCode();
+
+    // بوابة الحساب: بلا حساب لا دخول لروم ولا استعادة جلسة
     const allowed = await initAuthGate();
     if (!allowed) { updateTotalStats(); trackVisitOnce(); return; }
 
