@@ -138,10 +138,13 @@ CREATE POLICY "read_events_admin" ON app_events
 
 
 -- ============================================================================
--- 7) سجّل نفسك كإدمن — استبدل البريد ببريد حسابك الذي أنشأته سابقاً
+-- 7) سجّل حساب الإدارة — باسم المستخدم لا بالبريد
 -- ============================================================================
+-- الصلاحية مربوطة بالعضوية في admins، لا بالبريد. غيّر 'vip' لاسم حسابك.
+-- ملاحظة: الحساب لازم يكون مسجّلاً من شاشة اللعبة أولاً حتى يوجد له صف
+-- في profiles.
 INSERT INTO admins (user_id)
-SELECT id FROM auth.users WHERE email = 'ramahasheer@gmail.com'
+SELECT id FROM profiles WHERE username = 'vip'
 ON CONFLICT (user_id) DO NOTHING;
 
 
