@@ -2431,3 +2431,93 @@ select {
   border-radius: 10px;
   padding: 6px 12px;
 }
+
+/* ============================= MULTIPLE CHOICE ============================= */
+
+.choice-hint {
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+  margin: 10px 0 14px;
+  min-height: 20px;
+}
+
+.choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 12px 14px;
+  text-align: right;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-radius: 12px;
+  color: var(--text);
+  font-family: 'Tajawal', sans-serif;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+
+.choice:not(:disabled):hover {
+  background: rgba(212, 175, 55, 0.14);
+  border-color: var(--gold);
+  transform: translateY(-1px);
+}
+
+.choice:disabled { cursor: default; }
+
+.choice-letter {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(212, 175, 55, 0.2);
+  color: var(--gold);
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.choice-text { flex: 1; }
+
+.choice.correct {
+  background: rgba(39, 174, 96, 0.22);
+  border-color: var(--success);
+}
+
+.choice.correct .choice-letter { background: var(--success); color: #fff; }
+
+.choice.wrong {
+  background: rgba(231, 76, 60, 0.2);
+  border-color: var(--error);
+}
+
+.choice.wrong .choice-letter { background: var(--error); color: #fff; }
+
+.choice.dim { opacity: 0.45; }
+
+.answer-result {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 10px;
+  text-align: center;
+  font-size: 15px;
+}
+
+.answer-result.ok { background: rgba(39, 174, 96, 0.15); color: var(--success); }
+.answer-result.no { background: rgba(231, 76, 60, 0.15); color: var(--error); }
+
+@media (max-width: 768px) {
+  .choices { grid-template-columns: 1fr; }
+  .choice { min-height: 52px; font-size: 15px; }
+}

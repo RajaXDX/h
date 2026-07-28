@@ -721,12 +721,120 @@ function renderBoard() {
   }
 }
 
+/* ============================= MULTIPLE CHOICE ============================= */
+/*
+  بنك الأسئلة يحوي الإجابة الصحيحة فقط — لا خيارات خاطئة في أي من الأسئلة.
+  لذلك نولّد المشتّتات من إجابات أسئلة أخرى في نفس الفئة ونفس المستوى، وهي
+  الأقرب شكلاً وطولاً للإجابة الصحيحة فتكون منافسة معقولة. وإن لم تكفِ،
+  نوسّع للمستويات الأخرى في الفئة نفسها ثم لبقية الفئات.
+*/
+
+function collectAnswerPool(categoryName, diffKey, exclude) {
+  const seen = new Set([normalizeAnswer(exclude)]);
+  const pool = [];
+
+  const take = (list) => {
+    (list || []).forEach(q => {
+      const a = String(q?.answer || '').trim();
+      const key = normalizeAnswer(a);
+      if (!a || seen.has(key)) return;
+      seen.add(key);
+      pool.push(a);
+    });
+  };
+
+  // 1) نفس الفئة ونفس المستوى — الأقرب سياقاً
+  take(QBANK[categoryName]?.[diffKey]);
+
+  // 2) نفس الفئة، مستويات أخرى
+  if (pool.length < 12) {
+    DIFFKEY.filter(k => k !== diffKey).forEach(k => take(QBANK[categoryName]?.[k]));
+  }
+
+  // 3) فئات أخرى — ملاذ أخير
+  if (pool.length < 3) {
+    Object.keys(QBANK).forEach(cat => {
+      if (cat === categoryName) return;
+      DIFFKEY.forEach(k => take(QBANK[cat]?.[k]));
+    });
+  }
+
+  return pool;
+}
+
+// نطبّع للمقارنة: نزيل التشكيل والمسافات الزائدة وأل التعريف حتى لا يظهر
+// خياران متطابقان فعلياً بصياغتين مختلفتين
+function normalizeAnswer(text) {
+  return String(text || '')
+    .replace(/[ً-ْـ]/g, '')
+    .replace(/[إأآا]/g, 'ا')
+    .replace(/[ةه]/g, 'ه')
+    .replace(/[ىي]/g, 'ي')
+    .replace(/\s+/g, ' ')
+    .replace(/^ال/, '')
+    .trim()
+    .toLowerCase();
+}
+
+// اختيار مشتّتات مقاربة في الطول للإجابة الصحيحة — الخيار القصير جداً وسط
+// خيارات طويلة يكشف نفسه
+function buildChoices(item, categoryName, diffKey, seed) {
+  const correct = String(item?.answer || '').trim();
+  if (!correct) return null;
+
+  const pool = collectAnswerPool(categoryName, diffKey, correct);
+  if (pool.length < 3) return null;
+
+  const rand = makeSeededRandom(seed);
+
+  // نرتّب حسب قرب الطول ثم نأخذ عشوائياً من الأقرب نصفهم
+  const byCloseness = pool
+    .map(a => ({ a, d: Math.abs(a.length - correct.length) }))
+    .sort((x, y) => x.d - y.d);
+
+  const candidates = byCloseness.slice(0, Math.max(3, Math.min(20, byCloseness.length)));
+  const picked = [];
+  while (picked.length < 3 && candidates.length) {
+    const i = Math.floor(rand() * candidates.length);
+    picked.push(candidates.splice(i, 1)[0].a);
+  }
+  if (picked.length < 3) return null;
+
+  const choices = [correct, ...picked];
+
+  // خلط ثابت بنفس البذرة حتى يرى كل اللاعبين نفس الترتيب
+  for (let i = choices.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [choices[i], choices[j]] = [choices[j], choices[i]];
+  }
+
+  return { choices, correctIndex: choices.indexOf(correct) };
+}
+
+// مولّد عشوائي ببذرة: نفس البذرة تعطي نفس الترتيب على كل الأجهزة
+function makeSeededRandom(seed) {
+  let h = 2166136261;
+  const str = String(seed);
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return function () {
+    h += 0x6D2B79F5;
+    let t = h;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 /* ============================= QUESTION DIALOG ============================= */
 
 function openQuestion(ci, row) {
-  // في الأونلاين صاحب الروم وحده يفتح الأسئلة، والباقي يشاهدون
-  if (isOnlineGame() && !currentPlayer?.is_host) {
-    log('صاحب الروم هو من يفتح الأسئلة', 'info');
+  // في الأونلاين صاحب الدور هو من يفتح السؤال ويجيب عليه
+  if (isOnlineGame() && !isMyTurn()) {
+    const t = currentTurnPlayer();
+    uiAlert(`⏳ الدور الآن على ${t ? t.name : 'لاعب آخر'}`);
     return;
   }
 
@@ -749,6 +857,11 @@ function openQuestion(ci, row) {
   if (!item) {
     item = pickFromBank(cat.name, row);
     if (item) {
+      // في الأونلاين نولّد الخيارات ببذرة ثابتة حتى يراها كل اللاعبين بنفس الترتيب
+      if (isOnlineGame()) {
+        const mc = buildChoices(item, cat.name, DIFFKEY[row], `${currentRoom.id}-${cacheKey}`);
+        if (mc) { item = { ...item, choices: mc.choices, correctIndex: mc.correctIndex }; }
+      }
       questionCache[cacheKey] = item;
     } else {
       showQuickAddForm(cat, row, ci);
@@ -757,6 +870,7 @@ function openQuestion(ci, row) {
   }
 
   renderQuestionBody(item);
+  if (canControlGame() && isOnlineGame()) publishGameState();
   if (isOnlineHost()) publishGameState();
 }
 
@@ -819,6 +933,12 @@ function pickFromBank(categoryName, row) {
 function renderQuestionBody(item) {
   const body = document.getElementById('qbody');
   if (!body) return;
+
+  // أونلاين: أربعة خيارات واحتساب تلقائي بدل حكم المضيف
+  if (isOnlineGame() && Array.isArray(item.choices)) {
+    renderChoices(item);
+    return;
+  }
 
   body.innerHTML = `
     <div class="qimg" id="qimg">${item.emoji || '❓'}</div>
@@ -922,9 +1042,11 @@ function award(team, opts = {}) {
 
 function closeQuestion() {
   document.getElementById('overlay').classList.remove('show');
+  document.getElementById('cornersBar').style.display = '';
   current = null;
+  lastAnswer = null;
   clearActiveLifeline();
-  if (isOnlineHost()) publishGameState();
+  if (canControlGame()) publishGameState();
 }
 
 /* ============================= ONLINE GAME STATE SYNC ============================= */
@@ -938,9 +1060,15 @@ function isOnlineHost() {
   return isOnlineGame() && !!currentPlayer?.is_host;
 }
 
+// من يحقّ له تحديث حالة اللعبة: المضيف أو صاحب الدور (لأنه هو من يجيب)
+function canControlGame() {
+  return isOnlineHost() || isMyTurn();
+}
+
 // صاحب الروم يبثّ حالة اللعبة كاملة حتى تظهر نفسها على كل الأجهزة
 function publishGameState(extra = {}) {
-  if (!isOnlineHost()) return;
+  // المضيف أو صاحب الدور — لأن صاحب الدور هو من يجيب فيغيّر الحالة
+  if (!canControlGame()) return;
 
   const state = {
     phase: 'playing',
@@ -958,6 +1086,7 @@ function publishGameState(extra = {}) {
     openQuestion: current
       ? { ci: current.ci, row: current.row, round: activeRound, item: questionCache[`${activeRound}-${current.ci}-${current.row}`] }
       : null,
+    lastAnswer,
     ...extra
   };
 
@@ -991,6 +1120,7 @@ function applyRemoteGameState(state) {
   if (state.scores) scores = state.scores;
   if (state.activeTeam) activeTeam = state.activeTeam;
   if (Array.isArray(state.turnOrder)) turnOrder = state.turnOrder;
+  lastAnswer = state.lastAnswer || null;
   if (typeof state.turnIndex === 'number') turnIndex = state.turnIndex;
   if (state.lifelines) {
     if (state.lifelines.setup) {
@@ -1367,4 +1497,112 @@ async function startGameOnline() {
   selectedCats = []; // مسح الفئات السابقة
   showScreen('screen-categories');
   renderCatGrid();
+}
+
+/* ============================= CHOICE UI & AUTO SCORING ============================= */
+
+// نتيجة السؤال الحالي بعد الإجابة: { pickedIndex, correctIndex, byName, team, correct }
+let lastAnswer = null;
+
+function renderChoices(item) {
+  const body = document.getElementById('qbody');
+  if (!body) return;
+
+  const mine = isMyTurn();
+  const turn = currentTurnPlayer();
+  const done = !!lastAnswer;
+
+  const letters = ['أ', 'ب', 'ج', 'د'];
+
+  body.innerHTML = `
+    <div class="qimg">${item.emoji || '❓'}</div>
+    <div class="qtext">${escapeHtml(item.question)}</div>
+    <div class="choice-hint">${
+      done ? '' : (mine ? '👈 اختر إجابتك' : `⏳ ${escapeHtml(turn?.name || 'لاعب آخر')} يجيب الآن`)
+    }</div>
+    <div class="choices" id="choicesWrap">
+      ${item.choices.map((c, i) => {
+        let cls = 'choice';
+        if (done) {
+          if (i === item.correctIndex) cls += ' correct';
+          else if (i === lastAnswer.pickedIndex) cls += ' wrong';
+          else cls += ' dim';
+        }
+        return `<button class="${cls}" data-i="${i}"${(!mine || done) ? ' disabled' : ''}>
+                  <span class="choice-letter">${letters[i]}</span>
+                  <span class="choice-text">${escapeHtml(c)}</span>
+                </button>`;
+      }).join('')}
+    </div>
+    ${done ? `<div class="answer-result ${lastAnswer.correct ? 'ok' : 'no'}">
+        ${lastAnswer.correct
+          ? `✅ إجابة صحيحة — ${escapeHtml(lastAnswer.byName)} كسب ${POINTS[current.row]} نقطة`
+          : `❌ إجابة خاطئة من ${escapeHtml(lastAnswer.byName)} — الصحيحة: ${escapeHtml(item.choices[item.correctIndex])}`}
+      </div>` : ''}
+  `;
+
+  if (mine && !done) {
+    body.querySelectorAll('.choice').forEach(btn => {
+      btn.onclick = () => submitAnswer(Number(btn.dataset.i));
+    });
+  }
+
+  // الاحتساب تلقائي — نخفي أزرار إعطاء النقاط اليدوية
+  const corners = document.getElementById('cornersBar');
+  if (corners) corners.style.display = 'none';
+}
+
+// صاحب الدور يختار إجابة: التقييم والنقاط يتمّان تلقائياً، فلا مجال للغش
+function submitAnswer(index) {
+  if (!current || lastAnswer) return;
+  if (!isMyTurn()) return;
+
+  const key = `${activeRound}-${current.ci}-${current.row}`;
+  const item = questionCache[key];
+  if (!item || !Array.isArray(item.choices)) return;
+
+  const correct = index === item.correctIndex;
+  const turn = currentTurnPlayer();
+  const team = turn?.team || activeTeam;
+  const pts = POINTS[current.row];
+
+  lastAnswer = {
+    pickedIndex: index,
+    correctIndex: item.correctIndex,
+    byName: turn?.name || getTeamName(team),
+    team,
+    correct
+  };
+
+  if (correct) {
+    scores[team] = (scores[team] || 0) + pts;
+    Sound.award();
+  } else {
+    Sound.skip();
+  }
+
+  updateGameUI();
+  renderChoices(item);
+  publishGameState();
+
+  // مهلة قصيرة ليرى الجميع النتيجة قبل إغلاق السؤال
+  setTimeout(() => finishAnsweredQuestion(), 2600);
+}
+
+function finishAnsweredQuestion() {
+  if (!current) return;
+
+  stateUsed[activeRound][current.ci][current.row] = true;
+  lastAnswer = null;
+  closeQuestion();
+  renderBoard();
+  switchTurn();
+
+  if (isGameFinished()) {
+    if (canControlGame()) publishGameState({ phase: 'ended' });
+    showEndScreen();
+    return;
+  }
+
+  if (canControlGame()) publishGameState();
 }
