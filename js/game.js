@@ -71,7 +71,9 @@ let scores = { A: 0, B: 0 };
 let lifelineUsed = { A: [], B: [] };
 let activeRound = 0;
 let current = null;
-let activeTeam = null;   // الفريق صاحب الدور الحالي ('A' أو 'B')
+let activeTeam = null;      // الفريق صاحب الدور الحالي ('A' أو 'B')
+let turnOrder = [];         // ترتيب اللاعبين في الأونلاين: [{player_id, name, team}]
+let turnIndex = 0;          // موضع الدور الحالي داخل turnOrder
 
 const DIFF = ['سهل', 'متوسط', 'صعب'];
 const DIFFKEY = ['easy', 'medium', 'hard'];
@@ -267,6 +269,11 @@ function startGame() {
   // اختيار عشوائي لمن يبدأ اللعب
   activeTeam = Math.random() < 0.5 ? 'A' : 'B';
 
+  // في الأونلاين نبني ترتيب اللاعبين بالتناوب ابتداءً من الفريق المختار
+  turnOrder = isOnlineGame() ? buildTurnOrder(activeTeam) : [];
+  turnIndex = 0;
+  if (turnOrder.length) activeTeam = currentTurnPlayer().team;
+
   // إذا لم تكن في مود أونلاين، استخدم teamSetup. إذا كان في أونلاين، استخدم roomPlayers
   if (currentRoom) {
     // مود أونلاين - استخدم أسماء الفريق من Supabase
@@ -295,11 +302,44 @@ function startGame() {
 
 /* ============================= TURN HANDLING ============================= */
 
+// يبني ترتيب الأدوار بتناوب الفريقين: أ1 ← ب1 ← أ2 ← ب2 …
+// لو كان أحد الفريقين أكثر عدداً، يُكمل الباقون بالتتابع في نهاية الدورة.
+function buildTurnOrder(startingTeam) {
+  const pick = t => roomPlayers
+    .filter(p => p.team === t)
+    .map(p => ({ player_id: p.player_id, name: p.player_name, team: t }));
+
+  const first = pick(startingTeam);
+  const second = pick(startingTeam === 'A' ? 'B' : 'A');
+
+  const order = [];
+  const max = Math.max(first.length, second.length);
+  for (let i = 0; i < max; i++) {
+    if (first[i]) order.push(first[i]);
+    if (second[i]) order.push(second[i]);
+  }
+  return order;
+}
+
+// اللاعب صاحب الدور الحالي (أونلاين فقط)
+function currentTurnPlayer() {
+  if (!turnOrder.length) return null;
+  return turnOrder[turnIndex % turnOrder.length] || null;
+}
+
+// هل الدور على هذا الجهاز؟
+function isMyTurn() {
+  if (!isOnlineGame()) return true;
+  const p = currentTurnPlayer();
+  return !!p && p.player_id === currentPlayer?.player_id;
+}
+
 // إعلان الفريق الذي يبدأ اللعب في أول الجولة
 function announceStartingTeam() {
   if (!activeTeam) return;
 
-  const name = getTeamName(activeTeam);
+  const turn = currentTurnPlayer();
+  const name = turn ? turn.name : getTeamName(activeTeam);
   const icon = activeTeam === 'A' ? '🟢' : '🟡';
 
   const box = createElement('div', { class: 'start-toast' }, `
@@ -314,10 +354,14 @@ function announceStartingTeam() {
   setTimeout(() => box.remove(), 2800);
 }
 
-// تبديل الدور للفريق الآخر
+// تبديل الدور: في الأونلاين للاعب التالي في الترتيب، وفي المحلي للفريق الآخر
 function switchTurn() {
-  if (!activeTeam) return;
-  activeTeam = activeTeam === 'A' ? 'B' : 'A';
+  if (isOnlineGame() && turnOrder.length) {
+    turnIndex = (turnIndex + 1) % turnOrder.length;
+    activeTeam = currentTurnPlayer()?.team || activeTeam;
+  } else if (activeTeam) {
+    activeTeam = activeTeam === 'A' ? 'B' : 'A';
+  }
   renderTurnIndicator();
 }
 
@@ -333,7 +377,18 @@ function renderTurnIndicator() {
   if (!activeTeam) { banner.textContent = ''; return; }
 
   const icon = activeTeam === 'A' ? '🟢' : '🟡';
-  banner.innerHTML = `<span class="turn-label">الدور الآن:</span> ${icon} <b>${escapeHtml(getTeamName(activeTeam))}</b>`;
+  const turn = currentTurnPlayer();
+
+  if (turn) {
+    const mine = turn.player_id === currentPlayer?.player_id;
+    banner.innerHTML = `<span class="turn-label">الدور الآن:</span> ${icon} <b>${escapeHtml(turn.name)}</b>` +
+      `<span class="turn-team">${escapeHtml(teamSetup[turn.team]?.name || '')}</span>` +
+      (mine ? '<span class="turn-you">دورك أنت</span>' : '');
+    banner.classList.toggle('my-turn', mine);
+  } else {
+    banner.innerHTML = `<span class="turn-label">الدور الآن:</span> ${icon} <b>${escapeHtml(getTeamName(activeTeam))}</b>`;
+    banner.classList.remove('my-turn');
+  }
 }
 
 /* ============================= END OF GAME ============================= */
@@ -895,6 +950,8 @@ function publishGameState(extra = {}) {
     used: stateUsed,
     activeRound,
     activeTeam,
+    turnOrder,
+    turnIndex,
     scores,
     lifelines: { setup: { A: teamSetup.A.lifelines, B: teamSetup.B.lifelines },
                  used: lifelineUsed, active: activeLifeline },
@@ -933,6 +990,8 @@ function applyRemoteGameState(state) {
   if (state.used) stateUsed = state.used;
   if (state.scores) scores = state.scores;
   if (state.activeTeam) activeTeam = state.activeTeam;
+  if (Array.isArray(state.turnOrder)) turnOrder = state.turnOrder;
+  if (typeof state.turnIndex === 'number') turnIndex = state.turnIndex;
   if (state.lifelines) {
     if (state.lifelines.setup) {
       teamSetup.A.lifelines = state.lifelines.setup.A || [];

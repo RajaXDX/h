@@ -2407,3 +2407,27 @@ select {
   from { transform: scale(0.4); opacity: 0; }
   to   { transform: scale(1); opacity: 1; }
 }
+
+/* مؤشر الدور: اسم اللاعب وفريقه */
+.turn-banner .turn-team {
+  color: var(--muted);
+  font-size: 13px;
+  margin-inline-start: 6px;
+}
+
+.turn-banner .turn-you {
+  display: inline-block;
+  margin-inline-start: 8px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--gold);
+  color: var(--night);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.turn-banner.my-turn {
+  background: rgba(212, 175, 55, 0.1);
+  border-radius: 10px;
+  padding: 6px 12px;
+}
