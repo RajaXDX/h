@@ -220,6 +220,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   updateTotalStats();
+  trackVisitOnce();
 });
 
 // إيقاف الاستماع عند غلق الصفحة
@@ -232,3 +233,56 @@ window.addEventListener('beforeunload', () => {
 // ملاحظة: الاشتراك في تحديثات الروم (الحالة/الشات/اللاعبين) يتم في مكان واحد فقط:
 // subscribeToRoom() داخل js/rooms.js — كان هنا اشتراك ثانٍ على نفس الجداول
 // يسبب تنفيذ كل حدث مرتين (كل رسالة شات كانت تظهر مكرّرة).
+
+/* ============================= ANALYTICS ============================= */
+/* قياس بسيط لمعرفة أثر النشر. لا يُسجَّل أي شيء يخصّ هوية اللاعب —
+   لا اسم ولا رسالة ولا معرّف جهاز. فقط الحدث ومصدر الزيارة ونوع الجهاز.
+   يتطلّب تشغيل supabase-analytics.sql مرة واحدة. */
+
+function detectVisitSource() {
+  // ?src= له الأولوية (نضعه في الروابط التي ننشرها)، ثم المُحيل
+  const explicit = new URLSearchParams(location.search).get('src');
+  if (explicit) return explicit.slice(0, 40);
+
+  const ref = document.referrer || '';
+  if (!ref) return 'direct';
+
+  try {
+    const host = new URL(ref).hostname.replace(/^www\./, '');
+    const known = {
+      'wa.me': 'whatsapp', 'whatsapp.com': 'whatsapp',
+      'x.com': 'twitter', 't.co': 'twitter', 'twitter.com': 'twitter',
+      'instagram.com': 'instagram', 'tiktok.com': 'tiktok',
+      'snapchat.com': 'snapchat', 'youtube.com': 'youtube',
+      'google.com': 'google'
+    };
+    for (const k in known) if (host.endsWith(k)) return known[k];
+    return host.slice(0, 40);
+  } catch (e) {
+    return 'unknown';
+  }
+}
+
+async function trackEvent(event, source = null) {
+  if (!supa) return;
+
+  try {
+    await supa.from('app_events').insert({
+      event,
+      source: source || detectVisitSource(),
+      device: window.innerWidth <= 768 ? 'mobile' : 'desktop'
+    });
+  } catch (e) {
+    // القياس لا يجوز أن يعطّل اللعب أبداً
+    console.debug('تعذّر تسجيل الحدث:', e?.message);
+  }
+}
+
+// زيارة واحدة لكل جلسة تصفّح، لا لكل تحديث صفحة
+function trackVisitOnce() {
+  try {
+    if (sessionStorage.getItem('mr_visit_tracked')) return;
+    sessionStorage.setItem('mr_visit_tracked', '1');
+  } catch (e) { /* التخزين محجوب — نسجّل على أي حال */ }
+  trackEvent('visit');
+}

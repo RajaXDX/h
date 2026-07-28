@@ -82,6 +82,7 @@ async function createRoom(roomName, mode = 'online', playerName = '') {
     if (stateError) throw stateError;
 
     log(`✅ تم إنشاء روم جديدة: ${roomCode}`, 'success');
+    trackEvent('room_created');
     saveRoomSession();
     subscribeToRoom(roomData.id);
 

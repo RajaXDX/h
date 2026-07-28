@@ -282,6 +282,7 @@ function startGame() {
   showScreen('screen-game');
   renderTabs();
   renderBoard();
+  trackEvent(isOnlineGame() ? 'game_started' : 'game_started_local');
 
   // في الأونلاين: صاحب الروم يبثّ بداية اللعبة فتظهر اللوحة على كل الأجهزة
   if (isOnlineHost()) {
@@ -392,6 +393,7 @@ function showEndScreen() {
 
   showScreen('screen-end');
   Sound.award?.();
+  trackEvent('game_finished');
 }
 
 // مشاركة نتيجة اللعبة — لحظة الفوز هي أقوى لحظة يميل فيها اللاعبون للمشاركة

@@ -639,3 +639,77 @@ async function cleanupOldRooms() {
     uiAlert(`❌ خطأ: ${error.message}`);
   }
 }
+
+/* ============================= ANALYTICS VIEW ============================= */
+
+async function loadAnalytics() {
+  const box = document.getElementById('analyticsBox');
+  if (!box) return;
+
+  if (!supa) {
+    box.innerHTML = '<p style="color:#999">⚠️ غير متاح بدون اتصال بالسحابة</p>';
+    return;
+  }
+
+  box.innerHTML = '<p style="color:#999">جاري التحميل...</p>';
+
+  try {
+    const since = new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString();
+    const { data, error } = await supa
+      .from('app_events')
+      .select('event, source, device, created_at')
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+      .limit(5000);
+
+    if (error) throw error;
+
+    const rows = data || [];
+    if (!rows.length) {
+      box.innerHTML = `
+        <p style="color:#999">لا توجد بيانات بعد.</p>
+        <p style="font-size:12px;color:#999">
+          إن لم تكن شغّلت <code>supabase-analytics.sql</code> فشغّله أولاً،
+          ثم انتظر أول زيارة.
+        </p>`;
+      return;
+    }
+
+    const count = e => rows.filter(r => r.event === e).length;
+    const bySource = {};
+    rows.filter(r => r.event === 'visit').forEach(r => {
+      const s = r.source || 'unknown';
+      bySource[s] = (bySource[s] || 0) + 1;
+    });
+    const mobile = rows.filter(r => r.device === 'mobile').length;
+
+    const top = Object.entries(bySource).sort((a, b) => b[1] - a[1]).slice(0, 6);
+
+    box.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:14px">
+        ${[['👀 زيارات', count('visit')],
+           ['🚪 رومات', count('room_created')],
+           ['🎮 جولات', count('game_started') + count('game_started_local')],
+           ['🏆 اكتملت', count('game_finished')]]
+          .map(([l, v]) => `
+            <div style="padding:12px;background:rgba(212,175,55,.1);border-radius:8px;text-align:center">
+              <div style="font-size:12px;color:#9FB8AB">${l}</div>
+              <div style="font-size:22px;font-weight:900;color:#D4AF37">${v}</div>
+            </div>`).join('')}
+      </div>
+
+      <div style="padding:12px;background:rgba(0,0,0,.2);border-radius:8px;margin-bottom:10px">
+        <strong>من أين جاؤوا:</strong>
+        ${top.map(([s, n]) => `<div style="display:flex;justify-content:space-between;margin-top:6px">
+            <span>${escapeHtml(s)}</span><b style="color:#D4AF37">${n}</b></div>`).join('') || '<p>—</p>'}
+      </div>
+
+      <p style="font-size:12px;color:#9FB8AB">
+        📱 ${Math.round(mobile / rows.length * 100)}% من الجوال ·
+        آخر 14 يوماً · ${rows.length} حدث
+      </p>`;
+  } catch (e) {
+    box.innerHTML = `<p style="color:#E74C3C">تعذّر التحميل: ${escapeHtml(e.message || '')}</p>
+      <p style="font-size:12px;color:#999">غالباً لم يُشغَّل <code>supabase-analytics.sql</code> بعد.</p>`;
+  }
+}
