@@ -745,14 +745,18 @@ async function loadUsers() {
   box.innerHTML = '<p style="color:#999">جاري التحميل...</p>';
 
   try {
-    const { data, error } = await supa
-      .from('profiles')
-      .select('id, username, created_at, last_seen_at, games_played, games_won, total_score, rooms_created')
-      .order('created_at', { ascending: false })
-      .limit(500);
+    const [{ data, error }, { data: adminRows }] = await Promise.all([
+      supa.from('profiles')
+        .select('id, username, created_at, last_seen_at, games_played, games_won, total_score, rooms_created')
+        .order('created_at', { ascending: false })
+        .limit(500),
+      // admins مقروء للإدمن فقط — نعرف منه من يحمل الصلاحية
+      supa.from('admins').select('user_id')
+    ]);
 
     if (error) throw error;
 
+    const adminIds = new Set((adminRows || []).map(a => a.user_id));
     const rows = data || [];
     if (!rows.length) {
       box.innerHTML = '<p style="color:#999">لا توجد حسابات بعد.</p>';
@@ -764,10 +768,16 @@ async function loadUsers() {
     box.innerHTML = `
       <p style="font-size:13px;color:#9FB8AB;margin-bottom:10px;">${rows.length} حساب</p>
       <div class="users-list">
-        ${rows.map(u => `
-          <div class="user-row" data-user="${escapeHtml(u.id)}">
+        ${rows.map(u => {
+          const isAdmin = adminIds.has(u.id);
+          const safeId = escapeHtml(u.id);
+          const safeName = escapeHtml(u.username).replace(/'/g, "\'");
+          return `
+          <div class="user-row${isAdmin ? ' is-admin' : ''}" data-user="${safeId}">
             <div class="user-main">
-              <div class="user-name">👤 ${escapeHtml(u.username)}</div>
+              <div class="user-name">
+                ${isAdmin ? '<span class="admin-badge">⚙️ إدمن</span> ' : ''}👤 ${escapeHtml(u.username)}
+              </div>
               <div class="user-meta">انضم ${fmtDate(u.created_at)} · آخر ظهور ${fmtDate(u.last_seen_at)}</div>
             </div>
             <div class="user-stats">
@@ -776,11 +786,15 @@ async function loadUsers() {
               <span title="مجموع النقاط">⭐ ${Number(u.total_score) || 0}</span>
               <span title="رومات أنشأها">🚪 ${Number(u.rooms_created) || 0}</span>
             </div>
-            <button class="btn btn-skip user-del"
-              onclick="deletePlayerAccount('${escapeHtml(u.id)}', '${escapeHtml(u.username).replace(/'/g, "\'")}')">
-              🗑️ حذف
-            </button>
-          </div>`).join('')}
+            <div class="user-actions">
+              <button class="btn ${isAdmin ? 'btn-ghost' : 'btn-answer'}"
+                onclick="setPlayerAdmin('${safeId}', '${safeName}', ${!isAdmin})">
+                ${isAdmin ? '↩️ إزالة الإدارة' : '⚙️ ترقية لإدمن'}
+              </button>
+              <button class="btn btn-skip user-del"
+                onclick="deletePlayerAccount('${safeId}', '${safeName}')">🗑️ حذف</button>
+            </div>
+          </div>`; }).join('')}
       </div>`;
   } catch (e) {
     box.innerHTML = `<p style="color:#E74C3C">تعذّر التحميل: ${escapeHtml(e.message || '')}</p>
@@ -801,5 +815,29 @@ async function deletePlayerAccount(userId, username) {
     loadUsers();
   } catch (e) {
     uiAlert(`❌ تعذّر الحذف: ${e.message || ''}`);
+  }
+}
+
+// ترقية لاعب لإدمن أو إزالة صلاحيته.
+// القرار يُفرض في قاعدة البيانات: الدالة ترفض إن لم يكن المنادي إدمن،
+// وتمنع إزالة آخر إدمن أو إزالة الشخص نفسه — حتى لا تُقفل اللوحة على الجميع.
+async function setPlayerAdmin(userId, username, makeAdmin) {
+  const question = makeAdmin
+    ? `ترقية «${username}» لإدمن؟\n\nسيقدر يعدّل بنك الأسئلة ويحذف الحسابات.`
+    : `إزالة صلاحية الإدارة عن «${username}»؟`;
+
+  if (!await uiConfirm(question)) return;
+
+  try {
+    const { error } = await supa.rpc('admin_set_admin', {
+      target_id: userId,
+      make_admin: makeAdmin
+    });
+    if (error) throw error;
+
+    uiAlert(makeAdmin ? `✅ «${username}» صار إدمن` : `✅ أُزيلت الإدارة عن «${username}»`);
+    loadUsers();
+  } catch (e) {
+    uiAlert(`❌ ${e.message || 'تعذّرت العملية'}`);
   }
 }

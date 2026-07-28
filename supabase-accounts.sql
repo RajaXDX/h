@@ -154,3 +154,42 @@ ON CONFLICT (user_id) DO NOTHING;
 -- SELECT count(*) AS عدد_الإدمن FROM admins;              -- المتوقع: 1
 -- SELECT is_admin();                                       -- المتوقع: true
 -- SELECT policyname, cmd FROM pg_policies WHERE tablename = 'profiles';
+
+
+-- ============================================================================
+-- 8) ترقية لاعب لإدمن / إزالة الصلاحية — من لوحة الإدارة
+-- ============================================================================
+-- جدول admins بلا سياسة كتابة عمداً: لو فتحناها لـ authenticated لصار أي لاعب
+-- قادراً على ترقية نفسه. الكتابة تمرّ عبر هذه الدالة وحدها، وهي تتحقّق أن
+-- المنادي إدمن قبل أي شيء.
+CREATE OR REPLACE FUNCTION admin_set_admin(target_id UUID, make_admin BOOLEAN)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM admins WHERE user_id = auth.uid()) THEN
+    RAISE EXCEPTION 'غير مصرّح: هذه العملية للإدمن فقط';
+  END IF;
+
+  IF make_admin THEN
+    IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = target_id) THEN
+      RAISE EXCEPTION 'الحساب غير موجود';
+    END IF;
+    INSERT INTO admins (user_id) VALUES (target_id) ON CONFLICT (user_id) DO NOTHING;
+  ELSE
+    -- حاجزان يمنعان قفل اللوحة على الجميع
+    IF target_id = auth.uid() THEN
+      RAISE EXCEPTION 'لا يمكنك إزالة صلاحيتك بنفسك';
+    END IF;
+    IF (SELECT count(*) FROM admins) <= 1 THEN
+      RAISE EXCEPTION 'لا يمكن إزالة آخر إدمن';
+    END IF;
+    DELETE FROM admins WHERE user_id = target_id;
+  END IF;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION admin_set_admin(UUID, BOOLEAN) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION admin_set_admin(UUID, BOOLEAN) TO authenticated;

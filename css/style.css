@@ -2151,17 +2151,43 @@ select {
 
 /* ============================= AUTH ============================= */
 
-.auth-state {
+/* المؤشران كانا كلاهما absolute في نفس الزاوية فيتراكبان.
+   الآن في عمود واحد: حالة المزامنة فوق، والحساب تحتها. */
+.header-corner {
   position: absolute;
-  top: 22px;
+  top: 20px;
   right: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  z-index: 5;
+}
+
+.header-corner .sync-indicator {
+  position: static;
+  top: auto;
+  right: auto;
+}
+
+.auth-state {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 13px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 999px;
+  padding: 4px 6px 4px 12px;
+  white-space: nowrap;
 }
 
-.auth-user { color: var(--sand); }
+.auth-user {
+  color: var(--sand);
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .auth-signout {
   background: rgba(0, 0, 0, 0.25);
@@ -2285,7 +2311,44 @@ select {
 .user-del { min-height: 40px; }
 
 @media (max-width: 768px) {
-  .auth-state { position: static; justify-content: center; margin-top: 10px; }
+  .header-corner {
+    position: static;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    margin: 10px auto 0;
+  }
+  .auth-user { max-width: 90px; }
   .user-row { flex-direction: column; align-items: stretch; }
   .user-del { width: 100%; }
+}
+
+/* أزرار صف اللاعب */
+.user-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.user-actions .btn { min-height: 40px; }
+
+.user-row.is-admin {
+  border-color: var(--gold);
+  background: rgba(212, 175, 55, 0.08);
+}
+
+.admin-badge {
+  display: inline-block;
+  font-size: 12px;
+  color: var(--night);
+  background: var(--gold);
+  border-radius: 999px;
+  padding: 2px 8px;
+  margin-inline-end: 4px;
+}
+
+@media (max-width: 768px) {
+  .user-actions { width: 100%; }
+  .user-actions .btn { flex: 1; }
 }
