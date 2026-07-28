@@ -56,23 +56,30 @@ function validateCredentials(username, password) {
 
 /* ---- التسجيل والدخول ---- */
 
-async function signUpPlayer(username, password) {
+async function signUpPlayer(username, password, email) {
   if (!supa) return { error: 'قاعدة البيانات غير متصلة' };
 
   const problem = validateCredentials(username, password);
   if (problem) return { error: problem };
 
+  const mail = String(email || '').trim().toLowerCase();
+  if (!mail) return { error: 'البريد الإلكتروني مطلوب' };
+  if (!isValidEmail(mail)) return { error: 'صيغة البريد الإلكتروني غير صحيحة' };
+
   const clean = normalizeUsername(username);
 
   try {
+    // الحسابات الجديدة تُسجَّل ببريد حقيقي — وهو ما يجعل استعادة كلمة
+    // المرور ممكنة أصلاً. الحسابات القديمة تبقى على البريد المشتقّ من الاسم.
     const { data, error } = await supa.auth.signUp({
-      email: await usernameToEmail(clean),
-      password
+      email: mail,
+      password,
+      options: { emailRedirectTo: location.origin + location.pathname + '?recover=1' }
     });
 
     if (error) {
       if (/already registered|already been registered/i.test(error.message)) {
-        return { error: 'اسم المستخدم محجوز — اختر غيره' };
+        return { error: 'هذا البريد مسجّل بالفعل — سجّل الدخول أو استعد كلمة المرور' };
       }
       return { error: error.message };
     }
@@ -98,17 +105,26 @@ async function signUpPlayer(username, password) {
   }
 }
 
-async function signInPlayer(username, password) {
+async function signInPlayer(identifier, password) {
   if (!supa) return { error: 'قاعدة البيانات غير متصلة' };
-  if (!username || !password) return { error: 'اكتب اسم المستخدم وكلمة المرور' };
+  if (!identifier || !password) return { error: 'اكتب بياناتك وكلمة المرور' };
+
+  const raw = String(identifier).trim();
 
   try {
-    const { error } = await supa.auth.signInWithPassword({
-      email: await usernameToEmail(username),
+    // بريد صريح → مباشرة. اسم مستخدم → البريد المشتقّ (الحسابات القديمة).
+    let { error } = await supa.auth.signInWithPassword({
+      email: raw.includes('@') ? raw.toLowerCase() : await usernameToEmail(raw),
       password
     });
 
-    if (error) return { error: 'اسم المستخدم أو كلمة المرور غير صحيحة' };
+    // اسم مستخدم لحساب جديد مسجّل ببريد حقيقي: نجرّب المسار الآخر
+    if (error && !raw.includes('@')) {
+      const alt = await supa.auth.signInWithPassword({ email: raw.toLowerCase(), password });
+      error = alt.error;
+    }
+
+    if (error) return { error: 'البيانات غير صحيحة' };
 
     await loadProfile();
     await supa.from('profiles')
@@ -246,11 +262,24 @@ async function handleAuthSubmit(mode) {
   const setBusy = (busy) => btns.forEach(b => { b.disabled = busy; });
   if (msg) { msg.textContent = ''; msg.className = 'auth-message'; }
 
+  const mail = document.getElementById('authEmail')?.value;
+
+  if (mode === 'reset') { setBusy(false); return submitNewPassword(); }
+
   setBusy(true);
-  const res = mode === 'signup'
-    ? await signUpPlayer(u, p)
-    : await signInPlayer(u, p);
+  let res;
+  if (mode === 'signup')      res = await signUpPlayer(u, p, mail);
+  else if (mode === 'forgot') res = await requestPasswordReset(mail);
+  else                        res = await signInPlayer(u, p);
   setBusy(false);
+
+  if (mode === 'forgot' && res.ok) {
+    if (msg) {
+      msg.textContent = '📧 لو كان البريد مسجّلاً، وصلك رابط الاستعادة الآن';
+      msg.className = 'auth-message';
+    }
+    return;
+  }
 
   if (res.error) {
     if (msg) { msg.textContent = res.error; msg.className = 'auth-message error'; }
@@ -267,9 +296,13 @@ async function handleAuthSubmit(mode) {
 
 // البوابة عند تحميل الصفحة
 async function initAuthGate() {
-  if (!supa || !REQUIRE_ACCOUNT) return true;
+  if (!supa) return true;
 
+  // العودة من رابط استعادة كلمة المرور تسبق كل شيء
   await loadProfile();
+  if (await handleRecoveryLink()) return false;
+
+  if (!REQUIRE_ACCOUNT) return true;
   renderAuthState();
 
   if (!isSignedIn()) {
@@ -287,18 +320,103 @@ function switchAuthTab(mode) {
   currentAuthMode = mode;
   Sound.click();
 
-  document.getElementById('authTabLogin')?.classList.toggle('active', mode === 'login');
-  document.getElementById('authTabSignup')?.classList.toggle('active', mode === 'signup');
+  const el = id => document.getElementById(id);
+  el('authTabLogin')?.classList.toggle('active', mode === 'login');
+  el('authTabSignup')?.classList.toggle('active', mode === 'signup');
 
-  const btn = document.getElementById('authSubmitBtn');
-  const note = document.getElementById('authNote');
-  const pass = document.getElementById('authPassword');
+  const show = (id, on) => { const e = el(id); if (e) e.style.display = on ? '' : 'none'; };
+
+  // أربعة أوضاع: دخول · حساب جديد · نسيت كلمة المرور · تعيين كلمة جديدة
+  const conf = {
+    login:  { user: true,  email: false, pass: true,  btn: 'دخول',
+              note: 'ما عندك حساب؟ اضغط «حساب جديد» فوق', forgot: true,
+              userLabel: 'اسم المستخدم أو البريد' },
+    signup: { user: true,  email: true,  pass: true,  btn: 'إنشاء الحساب',
+              note: 'عندك حساب؟ اضغط «دخول» فوق', forgot: false,
+              userLabel: 'اسم المستخدم' },
+    forgot: { user: false, email: true,  pass: false, btn: 'أرسل رابط الاستعادة',
+              note: 'راح يوصلك رابط على بريدك — افتحه من نفس الجهاز', forgot: false },
+    reset:  { user: false, email: false, pass: true,  btn: 'حفظ كلمة المرور الجديدة',
+              note: 'اكتب كلمة مرور جديدة لحسابك', forgot: false }
+  }[mode] || {};
+
+  show('authUsernameRow', conf.user);
+  show('authEmailRow', conf.email);
+  show('authPasswordRow', conf.pass);
+  show('authForgotBtn', conf.forgot);
+
+  const userLabel = document.querySelector('#authUsernameRow label');
+  if (userLabel && conf.userLabel) userLabel.textContent = conf.userLabel;
+
+  const btn = el('authSubmitBtn');
+  if (btn) btn.textContent = conf.btn || 'متابعة';
+
+  const note = el('authNote');
+  if (note) note.textContent = conf.note || '';
+
+  const pass = el('authPassword');
+  if (pass) pass.setAttribute('autocomplete',
+    (mode === 'signup' || mode === 'reset') ? 'new-password' : 'current-password');
+
+  const msg = el('authMessage');
+  if (msg) { msg.textContent = ''; msg.className = 'auth-message'; }
+}
+
+/* ============================= PASSWORD RECOVERY ============================= */
+
+// إرسال رابط استعادة. Supabase يرسله للبريد المسجّل في الحساب — لذلك
+// الاستعادة تعمل فقط للحسابات المسجّلة ببريد حقيقي.
+async function requestPasswordReset(email) {
+  if (!supa) return { error: 'قاعدة البيانات غير متصلة' };
+
+  const mail = String(email || '').trim().toLowerCase();
+  if (!isValidEmail(mail)) return { error: 'اكتب بريداً إلكترونياً صحيحاً' };
+
+  try {
+    const { error } = await supa.auth.resetPasswordForEmail(mail, {
+      redirectTo: location.origin + location.pathname + '?recover=1'
+    });
+    if (error) return { error: error.message };
+
+    // لا نكشف هل البريد مسجّل أم لا — هذا يمنع استكشاف الحسابات
+    return { ok: true };
+  } catch (e) {
+    return { error: 'تعذّر الإرسال' };
+  }
+}
+
+// يُستدعى عند العودة من رابط الاستعادة: Supabase يضع جلسة مؤقتة تسمح
+// بتغيير كلمة المرور فقط.
+async function handleRecoveryLink() {
+  const hasFlag = new URLSearchParams(location.search).get('recover');
+  const hash = location.hash || '';
+  if (!hasFlag && !/type=recovery/.test(hash)) return false;
+
+  history.replaceState(null, '', location.pathname);
+  showScreen('screen-auth');
+  switchAuthTab('reset');
+  return true;
+}
+
+async function submitNewPassword() {
+  const p1 = document.getElementById('authPassword')?.value || '';
   const msg = document.getElementById('authMessage');
 
-  if (btn) btn.textContent = mode === 'signup' ? 'إنشاء الحساب' : 'دخول';
-  if (note) note.textContent = mode === 'signup'
-    ? 'عندك حساب؟ اضغط «دخول» فوق'
-    : 'ما عندك حساب؟ اضغط «حساب جديد» فوق';
-  if (pass) pass.setAttribute('autocomplete', mode === 'signup' ? 'new-password' : 'current-password');
-  if (msg) { msg.textContent = ''; msg.className = 'auth-message'; }
+  const show = (text, isError) => {
+    if (msg) { msg.textContent = text; msg.className = 'auth-message' + (isError ? ' error' : ''); }
+  };
+
+  if (p1.length < 6) return show('كلمة المرور لازم 6 أحرف على الأقل', true);
+
+  try {
+    const { error } = await supa.auth.updateUser({ password: p1 });
+    if (error) return show(error.message, true);
+
+    show('✅ تم تغيير كلمة المرور — جارٍ الدخول...', false);
+    await loadProfile();
+    renderAuthState();
+    setTimeout(() => goToModeSelect(), 900);
+  } catch (e) {
+    show('تعذّر تغيير كلمة المرور', true);
+  }
 }

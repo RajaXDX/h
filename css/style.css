@@ -2521,3 +2521,17 @@ select {
   .choices { grid-template-columns: 1fr; }
   .choice { min-height: 52px; font-size: 15px; }
 }
+
+.auth-link {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  background: none;
+  border: none;
+  color: var(--gold);
+  font-family: 'Tajawal', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+  min-height: 44px;
+}
