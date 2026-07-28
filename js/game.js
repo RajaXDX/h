@@ -1064,13 +1064,12 @@ function showCreateRoomDialog() {
 
 async function createRoomAndEnter(roomName) {
   const playerName = prompt('اسمك:', 'اللاعب');
-  if (!playerName) return;
+  if (!playerName?.trim()) return;
 
-  const room = await createRoom(roomName, 'online');
-  if (room) {
-    currentPlayer.name = playerName;
-    goToRoomSetup();
-  }
+  // الاسم يُمرَّر لـ createRoom حتى يُحفظ في السحابة صحيحاً منذ البداية،
+  // بدل ضبطه محلياً بعد الإدراج حيث كان اسم الروم قد كُتب مكانه
+  const room = await createRoom(roomName, 'online', playerName.trim());
+  if (room) goToRoomSetup();
 }
 
 async function joinRoomByCode() {

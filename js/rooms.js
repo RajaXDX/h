@@ -14,7 +14,7 @@ const ROOM_CODE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
 /* ============================= ROOM CREATION ============================= */
 
-async function createRoom(roomName, mode = 'online') {
+async function createRoom(roomName, mode = 'online', playerName = '') {
   if (!supa) {
     alert('❌ قاعدة البيانات غير متصلة');
     return null;
@@ -43,7 +43,8 @@ async function createRoom(roomName, mode = 'online') {
     currentRoom = roomData;
     currentPlayer = {
       id: playerId,
-      name: `أنت (${roomName})`,
+      // اسم اللاعب هو ما كتبه هو، لا اسم الروم
+      name: (playerName || '').trim() || 'المضيف',
       player_id: playerId,
       device_id: getDeviceId(),
       team: null,
