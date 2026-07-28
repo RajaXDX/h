@@ -6,11 +6,26 @@
 // والصلاحية مفروضة في قاعدة البيانات (راجع supabase-admin-security.sql).
 const ADMIN_PIN = '2014';
 const LIFELINES = [
-  { key: 'fakh', name: 'الفخ', ic: '🪤' },
-  { key: 'istareeh', name: 'استريح', ic: '✋' },
-  { key: 'hofra', name: 'الحفرة', ic: '🕳️' },
-  { key: 'sadeeq', name: 'اتصال بصديق', ic: '📞' },
-  { key: 'jawabain', name: 'جاوب جوابين', ic: '✌️' },
+  {
+    key: 'fakh', name: 'الفخ', ic: '🪤',
+    desc: 'إذا أجاب الفريق الآخر إجابة صحيحة، تذهب النقاط لكم بدلاً منه.'
+  },
+  {
+    key: 'istareeh', name: 'استريح', ic: '✋',
+    desc: 'تتخطّون السؤال بلا نقاط لأحد، ويبقى الدور معكم.'
+  },
+  {
+    key: 'hofra', name: 'الحفرة', ic: '🕳️',
+    desc: 'يُمنع الفريق الآخر من أخذ نقاط هذا السؤال.'
+  },
+  {
+    key: 'sadeeq', name: 'اتصال بصديق', ic: '📞',
+    desc: 'لديكم 30 ثانية للاتصال بصديق يساعدكم في الإجابة.'
+  },
+  {
+    key: 'jawabain', name: 'جاوب جوابين', ic: '✌️',
+    desc: 'يحقّ لكم تقديم إجابتين، وتُحتسب لكم إن صحّت إحداهما.'
+  },
 ];
 
 const DEFAULT_CATEGORIES = [
@@ -462,15 +477,111 @@ function renderLifelineDisplay() {
       }, l.ic);
 
       if (!used) {
-        el.onclick = () => {
-          lifelineUsed[team].push(key);
-          renderLifelineDisplay();
-        };
+        el.onclick = () => useLifeline(team, key);
       }
 
       wrap.appendChild(el);
     });
   });
+}
+
+/* ============================= LIFELINES ============================= */
+
+// وسيلة المساعدة المفعّلة على السؤال المفتوح حالياً: { team, key }
+let activeLifeline = null;
+let friendCallTimer = null;
+
+function useLifeline(team, key) {
+  // في الأونلاين المضيف وحده يفعّلها (هو من يدير اللعب)
+  if (isOnlineGame() && !currentPlayer?.is_host) {
+    log('صاحب الروم هو من يفعّل وسائل المساعدة', 'info');
+    return;
+  }
+
+  if (lifelineUsed[team].includes(key)) return;
+
+  const l = LIFELINES.find(x => x.key === key);
+  if (!l) return;
+
+  // كلها تُستعمل أثناء سؤال مفتوح ما عدا لا شيء — نطلب فتح سؤال أولاً
+  if (!current) {
+    alert(`${l.ic} ${l.name}\n\n${l.desc}\n\nافتح السؤال أولاً ثم فعّلها.`);
+    return;
+  }
+
+  if (activeLifeline) {
+    alert('⚠️ فيه وسيلة مساعدة مفعّلة على هذا السؤال بالفعل');
+    return;
+  }
+
+  if (!confirm(`${l.ic} تفعيل «${l.name}» لفريق ${getTeamName(team)}؟\n\n${l.desc}\n\nتُستخدم مرة واحدة فقط طوال اللعبة.`)) {
+    return;
+  }
+
+  Sound.select();
+  lifelineUsed[team].push(key);
+  activeLifeline = { team, key };
+
+  renderLifelineDisplay();
+  renderLifelineBanner();
+  renderAwardButtons();   // الحفرة تعطّل أزرار الفريق الآخر
+
+  if (key === 'sadeeq') startFriendCall();
+  if (key === 'istareeh') {
+    // تخطٍّ فوري بلا نقاط مع بقاء الدور مع نفس الفريق
+    award(null, { keepTurn: true });
+    return;
+  }
+
+  if (isOnlineHost()) publishGameState();
+}
+
+function renderLifelineBanner() {
+  const banner = document.getElementById('lifelineBanner');
+  if (!banner) return;
+
+  if (!activeLifeline) {
+    banner.style.display = 'none';
+    banner.innerHTML = '';
+    return;
+  }
+
+  const l = LIFELINES.find(x => x.key === activeLifeline.key);
+  banner.style.display = 'block';
+  banner.innerHTML = `
+    <span class="ll-ic">${l.ic}</span>
+    <b>${l.name}</b> — ${getTeamName(activeLifeline.team)}
+    <div class="ll-desc">${l.desc}</div>
+    <div class="ll-timer" id="lifelineTimer"></div>
+  `;
+}
+
+// مؤقّت 30 ثانية لاتصال بصديق
+function startFriendCall() {
+  clearInterval(friendCallTimer);
+  let left = 30;
+
+  const tick = () => {
+    const el = document.getElementById('lifelineTimer');
+    if (!el) return;
+    el.textContent = `⏱️ ${left} ثانية`;
+    if (left <= 0) {
+      clearInterval(friendCallTimer);
+      el.textContent = '⏰ انتهى الوقت';
+      Sound.skip();
+    }
+    left--;
+  };
+
+  setTimeout(tick, 0);
+  friendCallTimer = setInterval(tick, 1000);
+}
+
+function clearActiveLifeline() {
+  clearInterval(friendCallTimer);
+  friendCallTimer = null;
+  activeLifeline = null;
+  renderLifelineBanner();
 }
 
 function backToSetupConfirm() {
@@ -661,18 +772,26 @@ function renderAwardButtons() {
 
   container.innerHTML = '';
 
-  const btnA = createElement('button', {
-    class: 'btn btn-award A'
-  }, `للـ ${teamSetup.A.name}`);
-  btnA.onclick = () => award('A');
+  // «الحفرة» تمنع الفريق الآخر من أخذ نقاط هذا السؤال
+  const blocked = activeLifeline?.key === 'hofra'
+    ? (activeLifeline.team === 'A' ? 'B' : 'A')
+    : null;
 
-  const btnB = createElement('button', {
-    class: 'btn btn-award B'
-  }, `للـ ${teamSetup.B.name}`);
-  btnB.onclick = () => award('B');
+  ['A', 'B'].forEach(team => {
+    const isBlocked = blocked === team;
+    const btn = createElement('button', {
+      class: `btn btn-award ${team}${isBlocked ? ' blocked' : ''}`,
+      title: isBlocked ? 'محجوب بـ «الحفرة»' : ''
+    }, `${isBlocked ? '🕳️ ' : ''}للـ ${getTeamName(team)}`);
 
-  container.appendChild(btnA);
-  container.appendChild(btnB);
+    if (isBlocked) {
+      btn.disabled = true;
+    } else {
+      btn.onclick = () => award(team);
+    }
+
+    container.appendChild(btn);
+  });
 }
 
 function toggleAnswer() {
@@ -695,10 +814,18 @@ function toggleAnswer() {
   }
 }
 
-function award(team) {
+function award(team, opts = {}) {
   if (!current) return;
 
   const pts = POINTS[current.row];
+
+  // «الفخ»: إذا أجاب الفريق الآخر صحيحاً، تذهب النقاط لصاحب الفخ
+  if (team && activeLifeline?.key === 'fakh' && team !== activeLifeline.team) {
+    const trapper = activeLifeline.team;
+    alert(`🪤 وقع ${getTeamName(team)} في فخ ${getTeamName(trapper)}!\nالنقاط (${pts}) تذهب لـ ${getTeamName(trapper)}.`);
+    team = trapper;
+  }
+
   if (team) {
     scores[team] += pts;
     const scoreEl = document.getElementById(`score${team}`);
@@ -712,8 +839,8 @@ function award(team) {
   closeQuestion();
   renderBoard();
 
-  // الدور ينتقل للفريق الآخر بعد كل سؤال
-  switchTurn();
+  // الدور ينتقل للفريق الآخر، إلا مع «استريح» فيبقى مع نفس الفريق
+  if (!opts.keepTurn) switchTurn();
 
   // انتهت كل الخلايا؟ نعرض شاشة الفوز
   if (isGameFinished()) {
@@ -728,6 +855,7 @@ function award(team) {
 function closeQuestion() {
   document.getElementById('overlay').classList.remove('show');
   current = null;
+  clearActiveLifeline();
   if (isOnlineHost()) publishGameState();
 }
 
@@ -755,6 +883,8 @@ function publishGameState(extra = {}) {
     activeRound,
     activeTeam,
     scores,
+    lifelines: { setup: { A: teamSetup.A.lifelines, B: teamSetup.B.lifelines },
+                 used: lifelineUsed, active: activeLifeline },
     openQuestion: current
       ? { ci: current.ci, row: current.row, round: activeRound, item: questionCache[`${activeRound}-${current.ci}-${current.row}`] }
       : null,
@@ -790,6 +920,14 @@ function applyRemoteGameState(state) {
   if (state.used) stateUsed = state.used;
   if (state.scores) scores = state.scores;
   if (state.activeTeam) activeTeam = state.activeTeam;
+  if (state.lifelines) {
+    if (state.lifelines.setup) {
+      teamSetup.A.lifelines = state.lifelines.setup.A || [];
+      teamSetup.B.lifelines = state.lifelines.setup.B || [];
+    }
+    if (state.lifelines.used) lifelineUsed = state.lifelines.used;
+    activeLifeline = state.lifelines.active || null;
+  }
   activeRound = state.activeRound || 0;
 
   // انتهت اللعبة → شاشة الفوز على كل الأجهزة

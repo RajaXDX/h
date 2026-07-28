@@ -1942,3 +1942,54 @@ footer p {
     padding: 8px 4px;
   }
 }
+
+/* ============================= LIFELINE BANNER ============================= */
+
+.lifeline-banner {
+  margin: 10px auto 4px;
+  padding: 10px 14px;
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid var(--gold);
+  border-radius: 10px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.lifeline-banner .ll-ic {
+  font-size: 20px;
+  margin-inline-end: 4px;
+}
+
+.lifeline-banner .ll-desc {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.lifeline-banner .ll-timer {
+  font-family: 'Cairo', sans-serif;
+  font-weight: 900;
+  font-size: 20px;
+  color: var(--gold);
+  margin-top: 6px;
+}
+
+.lifeline-banner .ll-timer:empty { display: none; }
+
+/* زر الفريق المحجوب بـ«الحفرة» */
+.btn-award.blocked {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.6);
+}
+
+/* وسيلة المساعدة المتاحة في لوحة النتائج: نوضّح أنها قابلة للضغط */
+.team-lifelines .ic:not(.used) {
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.team-lifelines .ic:not(.used):hover {
+  transform: scale(1.15);
+}
