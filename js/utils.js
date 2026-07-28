@@ -102,6 +102,18 @@ ${total.toLocaleString('ar-EG')} سؤال في ${cats} فئة
 العبوا من جهاز واحد أو من أجهزتكم بكود روم`);
 }
 
+/* ---- HTML ESCAPING ---- */
+// تهرّب المحارف الخمسة. النسخة السابقة كانت textContent ثم innerHTML، وهي
+// لا تهرّب " ولا ' فتكون غير آمنة داخل الخصائص مثل value="..."
+function escapeHtml(text) {
+  return String(text ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 /* ---- MODAL DIALOGS ---- */
 async function showConfirm(message, onConfirm, onCancel) {
   if (await uiConfirm(message)) {

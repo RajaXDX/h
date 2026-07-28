@@ -665,9 +665,9 @@ function updatePlayersList() {
       listDiv.innerHTML = '';
       roomPlayers.forEach(player => {
         const playerDiv = createElement('div', { class: 'player-item' }, `
-          <span class="player-name">${player.player_name}</span>
-          <span class="player-team">${player.team ? `فريق ${player.team}` : '⏳ بانتظار التوزيع'}</span>
-          <span class="player-score">${player.score}</span>
+          <span class="player-name">${escapeHtml(player.player_name || '')}</span>
+          <span class="player-team">${player.team === 'A' || player.team === 'B' ? `فريق ${player.team}` : '⏳ بانتظار التوزيع'}</span>
+          <span class="player-score">${Number(player.score) || 0}</span>
         `);
         listDiv.appendChild(playerDiv);
       });
@@ -733,8 +733,5 @@ function displayChatMessage(message) {
   chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
+// ملاحظة: escapeHtml انتقلت إلى js/utils.js — فهي أداة عامة، و utils.js
+// يُحمَّل أولاً ويستخدمها بنفسه في نوافذ الحوار.

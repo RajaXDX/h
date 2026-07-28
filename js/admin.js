@@ -205,7 +205,7 @@ function renderAdminCategories() {
   wrap.innerHTML = '';
   CATEGORIES.forEach(c => {
     const chip = createElement('div', { class: 'cat-admin-chip' }, `
-      <span>${c.ic} ${c.name}</span>
+      <span>${escapeHtml(c.ic)} ${escapeHtml(c.name)}</span>
       <span class="del" title="حذف">✕</span>
     `);
     chip.querySelector('.del').onclick = () => deleteCategory(c.name);

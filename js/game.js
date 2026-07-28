@@ -87,7 +87,7 @@ function renderTeamSetup() {
   ['A', 'B'].forEach(team => {
     const teamDiv = createElement('div', { class: `team-setup ${team}` }, `
       <label>${team === 'A' ? '🟢' : '🟡'} اسم الفريق ${team === 'A' ? 'الأول' : 'الثاني'}</label>
-      <input type="text" id="setupName${team}" placeholder="الفريق ${team === 'A' ? 'الأول' : 'الثاني'}" value="${teamSetup[team].name}">
+      <input type="text" id="setupName${team}" placeholder="الفريق ${team === 'A' ? 'الأول' : 'الثاني'}" value="${escapeHtml(teamSetup[team].name)}">
       <div class="lifelines-label">وسائل المساعدة (اختر 3)</div>
       <div class="lifelines" id="lifelines${team}"></div>
       <div class="lifeline-count" id="count${team}">0 / 3</div>
@@ -186,7 +186,7 @@ function makeCatCard(c) {
   }, `
     <div class="check">✓</div>
     <span class="ic">${c.ic}</span>
-    <div class="nm">${c.name}</div>
+    <div class="nm">${escapeHtml(c.name)}</div>
   `);
   card.onclick = () => toggleCategory(c, card);
   return card;
@@ -552,7 +552,7 @@ function renderLifelineBanner() {
   banner.style.display = 'block';
   banner.innerHTML = `
     <span class="ll-ic">${l.ic}</span>
-    <b>${l.name}</b> — ${getTeamName(activeLifeline.team)}
+    <b>${l.name}</b> — ${escapeHtml(getTeamName(activeLifeline.team))}
     <div class="ll-desc">${l.desc}</div>
     <div class="ll-timer" id="lifelineTimer"></div>
   `;
@@ -634,7 +634,7 @@ function renderBoard() {
   cats.forEach(c => {
     const h = createElement('div', {
       class: 'cat-header'
-    }, `<span class="ic">${c.ic}</span><span>${c.name}</span>`);
+    }, `<span class="ic">${escapeHtml(c.ic)}</span><span>${escapeHtml(c.name)}</span>`);
     board.appendChild(h);
   });
 
@@ -670,7 +670,7 @@ function openQuestion(ci, row) {
 
   const qcat = document.getElementById('qcat');
   const qpoints = document.getElementById('qpoints');
-  if (qcat) qcat.innerHTML = `${cat.ic} ${cat.name}`;
+  if (qcat) qcat.innerHTML = `${escapeHtml(cat.ic)} ${escapeHtml(cat.name)}`;
   if (qpoints) qpoints.textContent = `${POINTS[row]} نقطة`;
 
   document.getElementById('cornersBar').style.display = 'none';
@@ -956,7 +956,7 @@ function applyRemoteGameState(state) {
     if (cat) {
       current = { ci: q.ci, row: q.row, cat };
       questionCache[`${q.round}-${q.ci}-${q.row}`] = q.item;
-      document.getElementById('qcat').innerHTML = `${cat.ic} ${cat.name}`;
+      document.getElementById('qcat').innerHTML = `${escapeHtml(cat.ic)} ${escapeHtml(cat.name)}`;
       document.getElementById('qpoints').textContent = `${POINTS[q.row]} نقطة`;
       renderQuestionBody(q.item);
       overlay.classList.add('show');
