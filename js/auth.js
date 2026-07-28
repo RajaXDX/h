@@ -202,11 +202,19 @@ async function bumpRoomsCreated() {
 // الإدمن = عضوية في جدول admins، لا مجرد "مسجّل دخول"،
 // لأن كل اللاعبين صاروا مسجّلين بعد إضافة الحسابات.
 async function checkIsAdmin() {
-  if (!supa || !currentProfile) return false;
+  if (!supa) return false;
   try {
+    // is_admin() تعتمد على auth.uid() من الجلسة نفسها.
+    // ⚠️ لا تشترط وجود صف في profiles: حساب الإدارة يُنشأ يدوياً في Supabase
+    // ولا ملف لاعب له، وكان اشتراط الملف يرفض دخول الإدمن الحقيقي.
     const { data, error } = await supa.rpc('is_admin');
-    return !error && data === true;
+    if (error) {
+      console.warn('is_admin فشلت:', error.message);
+      return false;
+    }
+    return data === true;
   } catch (e) {
+    console.warn('is_admin استثناء:', e);
     return false;
   }
 }
