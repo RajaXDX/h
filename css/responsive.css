@@ -38,7 +38,7 @@
   .sync-indicator {
     top: 14px;
     right: 12px;
-    font-size: 10px;
+    font-size: 12px;
     padding: 4px 8px;
   }
 
@@ -103,7 +103,7 @@
   }
 
   .cat-pick .nm {
-    font-size: 11px;
+    font-size: 12px;
   }
 
   /* Buttons */
@@ -279,7 +279,7 @@
   .sync-indicator {
     top: 12px;
     right: 10px;
-    font-size: 9px;
+    font-size: 12px;
     padding: 3px 6px;
   }
 
@@ -288,7 +288,7 @@
   }
 
   .tag {
-    font-size: 11px;
+    font-size: 12px;
   }
 
   header {
@@ -363,7 +363,7 @@
 
   .lifeline-chip {
     padding: 8px 2px;
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .lifeline-chip .ic {
@@ -372,7 +372,7 @@
   }
 
   .lifeline-count {
-    font-size: 10px;
+    font-size: 12px;
     margin-top: 6px;
   }
 
@@ -410,7 +410,7 @@
   }
 
   .cat-pick .nm {
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .selection-status {
@@ -470,7 +470,7 @@
 
   .reset-btn {
     padding: 4px 12px;
-    font-size: 11px;
+    font-size: 12px;
     margin: 8px auto 0;
   }
 
@@ -481,7 +481,7 @@
 
   .round-tab {
     padding: 5px 12px;
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .board-wrap {
@@ -498,7 +498,7 @@
   .cat-header {
     padding: 8px 4px;
     min-height: 46px;
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .cat-header .ic {
@@ -532,7 +532,7 @@
 
   .admin-tab {
     padding: 6px 10px;
-    font-size: 11px;
+    font-size: 12px;
     white-space: nowrap;
   }
 
@@ -564,7 +564,7 @@
   }
 
   .points-inputs label {
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .points-inputs input {
@@ -578,7 +578,7 @@
 
   .cat-admin-chip {
     padding: 5px 8px;
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .bank-controls {
@@ -602,11 +602,11 @@
   }
 
   .bank-item .bq {
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .bank-item .ba {
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .bank-item .del-q {
@@ -614,7 +614,7 @@
   }
 
   .bank-count {
-    font-size: 11px;
+    font-size: 12px;
     margin-top: 6px;
   }
 
@@ -663,16 +663,16 @@
   }
 
   .corner-label {
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .btn {
     padding: 6px 10px;
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .btn-skip {
-    font-size: 11px;
+    font-size: 12px;
   }
 
   #awardButtons {
@@ -691,7 +691,7 @@
   /* Footer */
   footer {
     padding: 12px 8px;
-    font-size: 11px;
+    font-size: 12px;
   }
 
   footer p {
@@ -717,5 +717,42 @@
 
   .screen {
     page-break-inside: avoid;
+  }
+}
+
+/* ============================= MOBILE LEGIBILITY FLOOR ============================= */
+/* حد أدنى 13px على الجوال — 12px مقروء على الكمبيوتر لكنه صغير على شاشة اليد */
+@media (max-width: 768px) {
+  .stat-label, .step-sub, .lifeline-count, .lifeline-chip,
+  .chat-time, .chat-text, .room-share-hint, .sync-indicator,
+  .code-label, .player-team, .player-score, .corner-label,
+  .cat-admin-chip, .admin-hint, .ll-desc, .end-team-name,
+  .winner-margin, .tie-text, .qcat, .qpoints {
+    font-size: 13px;
+  }
+}
+
+/* أرضية 13px شاملة على الجوال — تغطي الأزرار والتبويبات والتذييل والفقرات */
+@media (max-width: 768px) {
+  .tag, .admin-tab, .btn, .btn-main, .round-tab,
+  footer, footer p, footer span,
+  .screen p, .screen span:not(.ic):not(.btn-icon) {
+    font-size: 13px;
+  }
+
+  /* الأيقونات تبقى بحجمها */
+  .btn-icon, .stat-icon, .mode-icon, .ic { font-size: inherit; }
+}
+
+@media (max-width: 768px) {
+  .mode-desc, .lifelines-label, .cat-pick .nm,
+  .selection-status, .team-setup label, .screen label {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 768px) {
+  .cat-pick .check, .team-name, .reset-btn, .cat-header {
+    font-size: 13px;
   }
 }
