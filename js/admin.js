@@ -42,15 +42,20 @@ async function authenticateAdmin() {
     console.warn('تعذّر قراءة الجلسة:', e);
   }
 
-  const email = await uiPrompt('بريد حساب الإدارة:');
-  if (email === null) return false;
+  const identifier = await uiPrompt('اسم المستخدم أو بريد الإدارة:');
+  if (identifier === null) return false;
 
   const password = await uiPrompt('كلمة المرور:');
   if (password === null) return false;
 
   try {
+    // نقبل الاثنين: البريد لحساب الإدارة الأصلي، واسم المستخدم لحسابات
+    // اللاعبين التي مُنحت صلاحية الإدارة — بريدها مشتقّ من بصمة الاسم.
+    const raw = identifier.trim();
+    const email = raw.includes('@') ? raw : await usernameToEmail(raw);
+
     const { error } = await supa.auth.signInWithPassword({
-      email: email.trim(),
+      email,
       password
     });
 
