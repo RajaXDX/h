@@ -394,6 +394,17 @@ function showEndScreen() {
   showScreen('screen-end');
   Sound.award?.();
   trackEvent('game_finished');
+
+  // إحصاءات الحساب: نحسب فوز اللاعب حسب فريقه في الأونلاين،
+  // وفي المحلي نسجّل الجولة بأعلى نتيجة دون نسبة فوز لأحد بعينه
+  if (isSignedIn()) {
+    const myTeam = currentRoom && currentPlayer
+      ? roomPlayers.find(p => p.player_id === currentPlayer.player_id)?.team
+      : null;
+    const myScore = myTeam ? scores[myTeam] : Math.max(scores.A, scores.B);
+    const won = myTeam ? (scores[myTeam] > scores[myTeam === 'A' ? 'B' : 'A']) : (a !== b);
+    recordGameResult({ won, score: myScore });
+  }
 }
 
 // مشاركة نتيجة اللعبة — لحظة الفوز هي أقوى لحظة يميل فيها اللاعبون للمشاركة
@@ -1203,8 +1214,9 @@ async function showCreateRoomDialog() {
 }
 
 async function createRoomAndEnter(roomName) {
-  const playerName = await uiPrompt('اسمك:', 'اللاعب');
-  if (!playerName?.trim()) return;
+  // الاسم يأتي من الحساب — لا نسأل عنه مرتين
+  const playerName = isSignedIn() ? getPlayerDisplayName() : (await uiPrompt('اسمك:', 'اللاعب'))?.trim();
+  if (!playerName) return;
 
   // الاسم يُمرَّر لـ createRoom حتى يُحفظ في السحابة صحيحاً منذ البداية،
   // بدل ضبطه محلياً بعد الإدراج حيث كان اسم الروم قد كُتب مكانه
@@ -1214,7 +1226,9 @@ async function createRoomAndEnter(roomName) {
 
 async function joinRoomByCode() {
   const roomCode = document.getElementById('roomCodeInput')?.value?.toUpperCase();
-  const playerName = document.getElementById('playerNameInput')?.value;
+  const playerName = isSignedIn()
+    ? getPlayerDisplayName()
+    : document.getElementById('playerNameInput')?.value;
 
   if (!roomCode || roomCode.length < 4) {
     uiAlert('❌ أدخل كود الروم');

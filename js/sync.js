@@ -210,6 +210,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // بدء الاستماع للتغييرات
     listenToCloudChanges();
 
+    // بوابة الحساب أولاً: بلا حساب لا دخول لروم ولا استعادة جلسة
+    const allowed = await initAuthGate();
+    if (!allowed) { updateTotalStats(); trackVisitOnce(); return; }
+
     // رابط روم في العنوان له الأولوية على استعادة الجلسة القديمة
     try {
       const fromLink = await handleRoomLinkOnLoad();

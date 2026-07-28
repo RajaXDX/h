@@ -2148,3 +2148,144 @@ select {
   align-items: center;
   justify-content: center;
 }
+
+/* ============================= AUTH ============================= */
+
+.auth-state {
+  position: absolute;
+  top: 22px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.auth-user { color: var(--sand); }
+
+.auth-signout {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  color: var(--gold);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  min-height: 32px;
+}
+
+.auth-container {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.auth-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.auth-tab {
+  flex: 1;
+  min-height: 44px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 10px;
+  color: var(--muted);
+  font-family: 'Cairo', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.auth-tab.active {
+  background: rgba(212, 175, 55, 0.16);
+  border-color: var(--gold);
+  color: var(--sand);
+}
+
+.auth-form {
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.auth-form label {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.auth-form input {
+  width: 100%;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(239, 227, 198, 0.25);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: 'Tajawal', sans-serif;
+  font-size: 16px;
+}
+
+.auth-form input:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+.auth-form .btn-main { width: 100%; }
+
+.auth-message {
+  min-height: 20px;
+  font-size: 13px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.auth-message.error { color: var(--error); }
+
+.auth-note {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  margin: 12px 0 0;
+}
+
+/* ============================= ADMIN USERS LIST ============================= */
+
+.users-list { display: flex; flex-direction: column; gap: 8px; }
+
+.user-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+
+.user-main { flex: 1; min-width: 140px; }
+.user-name { font-weight: 700; color: var(--sand); font-size: 14px; }
+.user-meta { font-size: 13px; color: var(--muted); margin-top: 3px; }
+
+.user-stats {
+  display: flex;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text);
+  flex-wrap: wrap;
+}
+
+.user-del { min-height: 40px; }
+
+@media (max-width: 768px) {
+  .auth-state { position: static; justify-content: center; margin-top: 10px; }
+  .user-row { flex-direction: column; align-items: stretch; }
+  .user-del { width: 100%; }
+}

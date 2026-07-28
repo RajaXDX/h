@@ -29,10 +29,15 @@ async function authenticateAdmin() {
     return true;
   }
 
-  // جلسة سابقة ما زالت صالحة؟
+  // ⚠️ لا يكفي أن يكون مسجّل دخول — كل اللاعبين صاروا مسجّلين بعد إضافة
+  // الحسابات. الإدمن = عضوية في جدول admins، والتحقق يتم في قاعدة البيانات.
   try {
     const { data: { session } } = await supa.auth.getSession();
-    if (session) return true;
+    if (session) {
+      if (await checkIsAdmin()) return true;
+      uiAlert('❌ هذا الحساب ليس حساب إدارة');
+      return false;
+    }
   } catch (e) {
     console.warn('تعذّر قراءة الجلسة:', e);
   }
@@ -52,6 +57,13 @@ async function authenticateAdmin() {
     if (error) {
       uiAlert('❌ بيانات الدخول غير صحيحة');
       log(`فشل دخول الإدارة: ${error.message}`, 'error');
+      return false;
+    }
+
+    await loadProfile();
+    if (!(await checkIsAdmin())) {
+      uiAlert('❌ هذا الحساب ليس حساب إدارة');
+      await supa.auth.signOut();
       return false;
     }
 
@@ -711,5 +723,78 @@ async function loadAnalytics() {
   } catch (e) {
     box.innerHTML = `<p style="color:#E74C3C">تعذّر التحميل: ${escapeHtml(e.message || '')}</p>
       <p style="font-size:12px;color:#999">غالباً لم يُشغَّل <code>supabase-analytics.sql</code> بعد.</p>`;
+  }
+}
+
+/* ============================= PLAYER ACCOUNTS VIEW ============================= */
+
+async function loadUsers() {
+  const box = document.getElementById('usersBox');
+  if (!box) return;
+
+  if (!supa) {
+    box.innerHTML = '<p style="color:#999">⚠️ غير متاح بدون اتصال بالسحابة</p>';
+    return;
+  }
+
+  box.innerHTML = '<p style="color:#999">جاري التحميل...</p>';
+
+  try {
+    const { data, error } = await supa
+      .from('profiles')
+      .select('id, username, created_at, last_seen_at, games_played, games_won, total_score, rooms_created')
+      .order('created_at', { ascending: false })
+      .limit(500);
+
+    if (error) throw error;
+
+    const rows = data || [];
+    if (!rows.length) {
+      box.innerHTML = '<p style="color:#999">لا توجد حسابات بعد.</p>';
+      return;
+    }
+
+    const fmtDate = d => d ? new Date(d).toLocaleDateString('ar-SA') : '—';
+
+    box.innerHTML = `
+      <p style="font-size:13px;color:#9FB8AB;margin-bottom:10px;">${rows.length} حساب</p>
+      <div class="users-list">
+        ${rows.map(u => `
+          <div class="user-row" data-user="${escapeHtml(u.id)}">
+            <div class="user-main">
+              <div class="user-name">👤 ${escapeHtml(u.username)}</div>
+              <div class="user-meta">انضم ${fmtDate(u.created_at)} · آخر ظهور ${fmtDate(u.last_seen_at)}</div>
+            </div>
+            <div class="user-stats">
+              <span title="جولات">🎮 ${Number(u.games_played) || 0}</span>
+              <span title="فوز">🏆 ${Number(u.games_won) || 0}</span>
+              <span title="مجموع النقاط">⭐ ${Number(u.total_score) || 0}</span>
+              <span title="رومات أنشأها">🚪 ${Number(u.rooms_created) || 0}</span>
+            </div>
+            <button class="btn btn-skip user-del"
+              onclick="deletePlayerAccount('${escapeHtml(u.id)}', '${escapeHtml(u.username).replace(/'/g, "\'")}')">
+              🗑️ حذف
+            </button>
+          </div>`).join('')}
+      </div>`;
+  } catch (e) {
+    box.innerHTML = `<p style="color:#E74C3C">تعذّر التحميل: ${escapeHtml(e.message || '')}</p>
+      <p style="font-size:12px;color:#999">إن لم تكن شغّلت <code>supabase-accounts.sql</code> فشغّله أولاً.</p>`;
+  }
+}
+
+async function deletePlayerAccount(userId, username) {
+  if (!await uiConfirm(`حذف حساب «${username}» نهائياً؟\n\nستُحذف إحصاءاته معه ولا يمكن التراجع.`)) return;
+
+  try {
+    // الحذف يتم داخل قاعدة البيانات عبر دالة تتحقّق من صلاحية الإدمن،
+    // حتى لا يحتاج المتصفح أي مفتاح صلاحيات عليا
+    const { error } = await supa.rpc('admin_delete_player', { target_id: userId });
+    if (error) throw error;
+
+    uiAlert(`✅ تم حذف حساب «${username}»`);
+    loadUsers();
+  } catch (e) {
+    uiAlert(`❌ تعذّر الحذف: ${e.message || ''}`);
   }
 }
