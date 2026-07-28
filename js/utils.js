@@ -89,24 +89,22 @@ function goToCategories() {
 
 function showAbout() {
   Sound.click();
-  alert(`تحدي رجا v2.0
 
-لعبة أسئلة ذكية جماعية
+  let total = 0;
+  Object.values(typeof QBANK !== 'undefined' ? QBANK : {}).forEach(c => {
+    ['easy', 'medium', 'hard'].forEach(k => { total += (c[k] || []).length; });
+  });
+  const cats = Object.keys(typeof QBANK !== 'undefined' ? QBANK : {}).length;
 
-✨ الميزات:
-• بنك أسئلة متزامن سحابياً
-• 200+ سؤال متنوع
-• دعم عدة فرق
-• وسائل مساعدة ذكية
-• لوحة تحكم احترافية
-
-🚀 مطور: فريق تحدي رجا
-📧 البريد: support@challange-raj.app`);
+  uiAlert(`تحدي رجا — لعبة أسئلة جماعية
+${total.toLocaleString('ar-EG')} سؤال في ${cats} فئة
+فريقان، ثلاثة مستويات، ووسائل مساعدة
+العبوا من جهاز واحد أو من أجهزتكم بكود روم`);
 }
 
 /* ---- MODAL DIALOGS ---- */
-function showConfirm(message, onConfirm, onCancel) {
-  if (confirm(message)) {
+async function showConfirm(message, onConfirm, onCancel) {
+  if (await uiConfirm(message)) {
     if (onConfirm) onConfirm();
   } else {
     if (onCancel) onCancel();
@@ -114,11 +112,11 @@ function showConfirm(message, onConfirm, onCancel) {
 }
 
 function showPrompt(message, defaultValue = '') {
-  return prompt(message, defaultValue);
+  return uiPrompt(message, defaultValue);
 }
 
 function showAlert(message, title = 'تنبيه') {
-  alert(`${title}\n\n${message}`);
+  uiAlert(`${title}\n\n${message}`);
 }
 
 /* ---- STRING UTILITIES ---- */
@@ -327,4 +325,88 @@ function log(message, type = 'info') {
     default:
       console.log(`%c${prefix} ℹ️ ${message}`, 'color: #3498DB;');
   }
+}
+
+/* ============================= UI DIALOGS ============================= */
+/* بدائل مصمّمة لـ alert / confirm / prompt.
+   السبب: النوافذ الأصلية خارج هوية اللعبة، وبعض المتصفحات — خصوصاً على iOS
+   وداخل الإطارات — تحجب prompt() تماماً فيتوقّف إنشاء الروم بلا أي رسالة. */
+
+function closeUiModal(overlay, resolve, value) {
+  overlay.classList.remove('show');
+  setTimeout(() => overlay.remove(), 180);
+  resolve(value);
+}
+
+function buildUiModal({ message, kind, defaultValue = '', okText = 'موافق', cancelText = 'إلغاء' }) {
+  return new Promise(resolve => {
+    const overlay = createElement('div', { class: 'ui-modal-overlay' });
+
+    const box = createElement('div', { class: 'ui-modal' }, `
+      <div class="ui-modal-msg">${escapeHtml(String(message)).replace(/\n/g, '<br>')}</div>
+      ${kind === 'prompt' ? '<input type="text" class="ui-modal-input" id="uiModalInput">' : ''}
+      <div class="ui-modal-actions">
+        ${kind !== 'alert' ? `<button class="btn-main btn-ghost" data-act="cancel">${cancelText}</button>` : ''}
+        <button class="btn-main btn-primary" data-act="ok">${okText}</button>
+      </div>
+    `);
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('show'));
+
+    const input = box.querySelector('#uiModalInput');
+    if (input) {
+      input.value = defaultValue;
+      setTimeout(() => { input.focus(); input.select(); }, 60);
+    }
+
+    const cancelValue = kind === 'confirm' ? false : (kind === 'prompt' ? null : undefined);
+    const okValue = () => kind === 'confirm' ? true : (kind === 'prompt' ? input.value : undefined);
+
+    box.querySelector('[data-act="ok"]').onclick = () => closeUiModal(overlay, resolve, okValue());
+    const cancelBtn = box.querySelector('[data-act="cancel"]');
+    if (cancelBtn) cancelBtn.onclick = () => closeUiModal(overlay, resolve, cancelValue);
+
+    // النقر خارج الصندوق = إلغاء (وفي alert = إغلاق)
+    overlay.onclick = (e) => {
+      if (e.target === overlay) closeUiModal(overlay, resolve, cancelValue);
+    };
+
+    box.onkeydown = (e) => {
+      if (e.key === 'Enter' && kind !== 'alert') {
+        e.preventDefault();
+        closeUiModal(overlay, resolve, okValue());
+      } else if (e.key === 'Escape') {
+        closeUiModal(overlay, resolve, cancelValue);
+      }
+    };
+  });
+}
+
+// إشعار غير حاجب — يظهر ويختفي وحده
+function uiAlert(message) {
+  const wrap = document.getElementById('uiToasts') ||
+    document.body.appendChild(createElement('div', { id: 'uiToasts', class: 'ui-toasts' }));
+
+  const toast = createElement('div', { class: 'ui-toast' },
+    escapeHtml(String(message)).replace(/\n/g, '<br>'));
+
+  wrap.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('show'));
+
+  const remove = () => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 250);
+  };
+  toast.onclick = remove;
+  setTimeout(remove, 4000);
+}
+
+function uiConfirm(message, okText = 'نعم', cancelText = 'إلغاء') {
+  return buildUiModal({ message, kind: 'confirm', okText, cancelText });
+}
+
+function uiPrompt(message, defaultValue = '') {
+  return buildUiModal({ message, kind: 'prompt', defaultValue, okText: 'تم' });
 }

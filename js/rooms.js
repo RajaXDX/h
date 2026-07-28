@@ -16,7 +16,7 @@ const ROOM_CODE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
 async function createRoom(roomName, mode = 'online', playerName = '') {
   if (!supa) {
-    alert('❌ قاعدة البيانات غير متصلة');
+    uiAlert('❌ قاعدة البيانات غير متصلة');
     return null;
   }
 
@@ -97,7 +97,7 @@ async function createRoom(roomName, mode = 'online', playerName = '') {
 
 async function joinRoom(roomCode, playerName) {
   if (!supa) {
-    alert('❌ قاعدة البيانات غير متصلة');
+    uiAlert('❌ قاعدة البيانات غير متصلة');
     return false;
   }
 
@@ -111,12 +111,12 @@ async function joinRoom(roomCode, playerName) {
       .single();
 
     if (roomError || !roomData) {
-      alert('❌ الروم غير موجود');
+      uiAlert('❌ الروم غير موجود');
       return false;
     }
 
     if (roomData.status === 'completed') {
-      alert('❌ هذه الروم انتهت');
+      uiAlert('❌ هذه الروم انتهت');
       return false;
     }
 
@@ -135,13 +135,13 @@ async function joinRoom(roomCode, playerName) {
 
     // المطرود لا يعود
     if (seat?.status === 'kicked') {
-      alert('❌ تم إخراجك من هذه الروم');
+      uiAlert('❌ تم إخراجك من هذه الروم');
       return false;
     }
 
     // اللعبة بدأت ولا يوجد مقعد سابق → لاعب جديد لا يستطيع الدخول وسط جولة
     if (roomData.status === 'active' && !seat) {
-      alert('❌ اللعبة بدأت بالفعل، لا يمكن الانضمام الآن');
+      uiAlert('❌ اللعبة بدأت بالفعل، لا يمكن الانضمام الآن');
       return false;
     }
 
@@ -248,7 +248,7 @@ async function copyRoomLink() {
     document.body.appendChild(tmp);
     tmp.select();
     try { document.execCommand('copy'); done(); }
-    catch (err) { prompt('انسخ الرابط:', link); }
+    catch (err) { uiPrompt('انسخ الرابط:', link); }
     tmp.remove();
   }
 }
@@ -404,12 +404,12 @@ async function getRoomPlayers() {
 
 async function assignPlayerToTeam(playerId, team) {
   if (!currentRoom || !currentPlayer?.is_host) {
-    alert('❌ فقط صاحب الروم يمكنه توزيع الفرق');
+    uiAlert('❌ فقط صاحب الروم يمكنه توزيع الفرق');
     return false;
   }
 
   if (!['A', 'B'].includes(team)) {
-    alert('❌ الفريق يجب أن يكون A أو B');
+    uiAlert('❌ الفريق يجب أن يكون A أو B');
     return false;
   }
 
@@ -433,16 +433,16 @@ async function assignPlayerToTeam(playerId, team) {
 
 async function kickPlayer(playerId, playerName) {
   if (!currentRoom || !currentPlayer?.is_host) {
-    alert('❌ فقط صاحب الروم يمكنه طرد اللاعبين');
+    uiAlert('❌ فقط صاحب الروم يمكنه طرد اللاعبين');
     return false;
   }
 
   if (playerId === currentPlayer.player_id) {
-    alert('❌ لا يمكنك طرد نفسك');
+    uiAlert('❌ لا يمكنك طرد نفسك');
     return false;
   }
 
-  if (!confirm(`طرد ${playerName || 'هذا اللاعب'} من الروم؟`)) return false;
+  if (!await uiConfirm(`طرد ${playerName || 'هذا اللاعب'} من الروم؟`)) return false;
 
   try {
     const { error } = await supa
@@ -459,7 +459,7 @@ async function kickPlayer(playerId, playerName) {
     return true;
   } catch (error) {
     console.error('Kick player error:', error);
-    alert(`❌ تعذّر الطرد: ${error.message}`);
+    uiAlert(`❌ تعذّر الطرد: ${error.message}`);
     return false;
   }
 }
@@ -477,7 +477,7 @@ async function handleKickedOut() {
   roomPlayers = [];
   roomChatMessages = [];
 
-  alert('👋 تم إخراجك من الروم');
+  uiAlert('👋 تم إخراجك من الروم');
   showScreen('screen-home');
 }
 

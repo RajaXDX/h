@@ -20,10 +20,10 @@ let isAdminLoggedIn = false;
 async function authenticateAdmin() {
   // وضع محلي بحت: لا سحابة = لا ضرر على الآخرين
   if (!supa) {
-    const entered = prompt('وضع محلي (بدون سحابة).\nأدخل رمز لوحة الإدارة:');
+    const entered = await uiPrompt('وضع محلي (بدون سحابة).\nأدخل رمز لوحة الإدارة:');
     if (entered === null) return false;
     if (trimArabic(entered) !== ADMIN_PIN) {
-      alert('❌ رمز غير صحيح');
+      uiAlert('❌ رمز غير صحيح');
       return false;
     }
     return true;
@@ -37,10 +37,10 @@ async function authenticateAdmin() {
     console.warn('تعذّر قراءة الجلسة:', e);
   }
 
-  const email = prompt('بريد حساب الإدارة:');
+  const email = await uiPrompt('بريد حساب الإدارة:');
   if (email === null) return false;
 
-  const password = prompt('كلمة المرور:');
+  const password = await uiPrompt('كلمة المرور:');
   if (password === null) return false;
 
   try {
@@ -50,14 +50,14 @@ async function authenticateAdmin() {
     });
 
     if (error) {
-      alert('❌ بيانات الدخول غير صحيحة');
+      uiAlert('❌ بيانات الدخول غير صحيحة');
       log(`فشل دخول الإدارة: ${error.message}`, 'error');
       return false;
     }
 
     return true;
   } catch (e) {
-    alert('❌ تعذّر الاتصال بخدمة الدخول');
+    uiAlert('❌ تعذّر الاتصال بخدمة الدخول');
     console.error(e);
     return false;
   }
@@ -186,7 +186,7 @@ function savePoints() {
   saveJSON('mr_points', POINTS);
   pushToCloud();
   Sound.award();
-  alert('✅ تم حفظ النقاط بنجاح');
+  uiAlert('✅ تم حفظ النقاط بنجاح');
 
   if (document.querySelector('#screen-game.active')) {
     renderBoard();
@@ -216,7 +216,7 @@ function renderAdminCategories() {
 function adminAddCategory() {
   // ✅ حماية أمنية: التحقق من أن الإدمن مسجل دخول
   if (!isAdminLoggedIn) {
-    alert('❌ يجب تسجيل الدخول كإدمن أولاً');
+    uiAlert('❌ يجب تسجيل الدخول كإدمن أولاً');
     return;
   }
 
@@ -225,7 +225,7 @@ function adminAddCategory() {
   if (!name) return;
 
   if (CATEGORIES.some(c => c.name === name)) {
-    alert('❌ هذه الفئة موجودة بالفعل');
+    uiAlert('❌ هذه الفئة موجودة بالفعل');
     input.value = '';
     return;
   }
@@ -237,11 +237,11 @@ function adminAddCategory() {
   renderAdminCategories();
   populateBankCatSelect();
   log(`✅ تمت إضافة فئة جديدة: ${name}`, 'success');
-  alert('✅ تمت إضافة الفئة بنجاح');
+  uiAlert('✅ تمت إضافة الفئة بنجاح');
 }
 
-function deleteCategory(name) {
-  if (!confirm(`هل تريد حذف الفئة "${name}"؟`)) return;
+async function deleteCategory(name) {
+  if (!await uiConfirm(`هل تريد حذف الفئة "${name}"؟`)) return;
 
   CATEGORIES = CATEGORIES.filter(c => c.name !== name);
   selectedCats = selectedCats.filter(c => c.name !== name);
@@ -253,7 +253,7 @@ function deleteCategory(name) {
 
   renderAdminCategories();
   populateBankCatSelect();
-  alert('✅ تم حذف الفئة بنجاح');
+  uiAlert('✅ تم حذف الفئة بنجاح');
 }
 
 /* ============================= QUESTION BANK MANAGEMENT ============================= */
@@ -285,7 +285,7 @@ function populateBankCatSelect() {
 function addBankQuestion() {
   // ✅ حماية أمنية: فقط الإدمن يمكنه إضافة أسئلة
   if (!isAdminLoggedIn) {
-    alert('❌ يجب تسجيل الدخول كإدمن أولاً');
+    uiAlert('❌ يجب تسجيل الدخول كإدمن أولاً');
     return;
   }
 
@@ -296,7 +296,7 @@ function addBankQuestion() {
   const emoji = document.getElementById('newQEmoji').value.trim() || '❓';
 
   if (!cat || !q || !a) {
-    alert('❌ لازم تكتب نص السؤال والإجابة على الأقل');
+    uiAlert('❌ لازم تكتب نص السؤال والإجابة على الأقل');
     return;
   }
 
@@ -322,14 +322,14 @@ function addBankQuestion() {
   log(`✅ تمت إضافة سؤال جديد في فئة ${cat}`, 'success');
   Sound.award();
   renderBankList();
-  alert('✅ تم إضافة السؤال بنجاح');
+  uiAlert('✅ تم إضافة السؤال بنجاح');
   updateTotalStats();
 }
 
-function deleteBankQuestion(cat, diffKey, idx) {
+async function deleteBankQuestion(cat, diffKey, idx) {
   if (!QBANK[cat] || !QBANK[cat][diffKey]) return;
 
-  if (!confirm('هل تريد حذف هذا السؤال؟')) return;
+  if (!await uiConfirm('هل تريد حذف هذا السؤال؟')) return;
 
   QBANK[cat][diffKey].splice(idx, 1);
   saveJSON('mr_bank', QBANK);
@@ -394,7 +394,7 @@ function exportBankJSON() {
   a.download = `mokhamakh-raj-${Date.now()}.json`;
   a.click();
   URL.revokeObjectURL(url);
-  alert('✅ تم تصدير البيانات بنجاح');
+  uiAlert('✅ تم تصدير البيانات بنجاح');
 }
 
 function importBankJSON() {
@@ -411,7 +411,7 @@ function importBankJSON() {
         const data = JSON.parse(reader.result);
 
         if (!data.questions) {
-          alert('❌ صيغة الملف غير صحيحة');
+          uiAlert('❌ صيغة الملف غير صحيحة');
           return;
         }
 
@@ -440,10 +440,10 @@ function importBankJSON() {
         populateBankCatSelect();
         updateTotalStats();
 
-        alert('✅ تم استيراد البيانات بنجاح');
+        uiAlert('✅ تم استيراد البيانات بنجاح');
       } catch (error) {
         console.error(error);
-        alert('❌ خطأ في قراءة الملف');
+        uiAlert('❌ خطأ في قراءة الملف');
       }
     };
     reader.readAsText(file);
@@ -463,7 +463,7 @@ function syncNow() {
 
 function importImages() {
   if (!isAdminLoggedIn) {
-    alert('❌ يجب تسجيل الدخول كإدمن أولاً');
+    uiAlert('❌ يجب تسجيل الدخول كإدمن أولاً');
     return;
   }
 
@@ -471,7 +471,7 @@ function importImages() {
   const files = fileInput.files;
 
   if (files.length === 0) {
-    alert('❌ اختر صوراً من الجهاز أولاً');
+    uiAlert('❌ اختر صوراً من الجهاز أولاً');
     return;
   }
 
@@ -538,7 +538,7 @@ ${imageCount > 5 ? `... و ${imageCount - 5} صور أخرى` : ''}
 
 يمكنك الآن استخدام أسماء الصور في الأسئلة!
   `;
-  alert(msg);
+  uiAlert(msg);
 }
 
 function formatBytes(bytes) {
@@ -562,9 +562,9 @@ async function reloadQuestionBank() {
   updateSyncInfo();
 
   if (added > 0) {
-    alert(`✅ تم تحميل ${added} سؤال جديد\n\nالمجموع الآن: ${after} سؤال (كان ${before})`);
+    uiAlert(`✅ تم تحميل ${added} سؤال جديد\n\nالمجموع الآن: ${after} سؤال (كان ${before})`);
   } else {
-    alert(`ℹ️ بنك الأسئلة محدّث بالفعل — ${after} سؤال`);
+    uiAlert(`ℹ️ بنك الأسئلة محدّث بالفعل — ${after} سؤال`);
   }
 }
 
@@ -585,7 +585,7 @@ function countBankQuestions() {
 // الحل هنا: نُغلق الرومات القديمة (status = completed) فتختفي من أي قائمة رومات نشطة.
 async function cleanupOldRooms() {
   if (!supa) {
-    alert('❌ Supabase غير متصل');
+    uiAlert('❌ Supabase غير متصل');
     return;
   }
 
@@ -598,11 +598,11 @@ async function cleanupOldRooms() {
     if (readError) throw readError;
 
     if (!openRooms || openRooms.length === 0) {
-      alert('ℹ️ لا توجد رومات مفتوحة — كل شيء نظيف');
+      uiAlert('ℹ️ لا توجد رومات مفتوحة — كل شيء نظيف');
       return;
     }
 
-    if (!confirm(`إغلاق ${openRooms.length} روم مفتوحة؟\nاللاعبون فيها سيحتاجون إنشاء روم جديدة.`)) {
+    if (!await uiConfirm(`إغلاق ${openRooms.length} روم مفتوحة؟\nاللاعبون فيها سيحتاجون إنشاء روم جديدة.`)) {
       return;
     }
 
@@ -628,14 +628,14 @@ async function cleanupOldRooms() {
 
     const remaining = stillOpen?.length ?? 0;
     if (remaining > 0) {
-      alert(`⚠️ أُغلقت ${openRooms.length - remaining} روم، وبقيت ${remaining} لم تُغلق (تحقّق من صلاحيات Supabase)`);
+      uiAlert(`⚠️ أُغلقت ${openRooms.length - remaining} روم، وبقيت ${remaining} لم تُغلق (تحقّق من صلاحيات Supabase)`);
     } else {
-      alert(`✅ تم إغلاق ${openRooms.length} روم`);
+      uiAlert(`✅ تم إغلاق ${openRooms.length} روم`);
     }
 
     log(`🧹 تم إغلاق ${openRooms.length - remaining} روم`, 'success');
   } catch (error) {
     console.error('Cleanup error:', error);
-    alert(`❌ خطأ: ${error.message}`);
+    uiAlert(`❌ خطأ: ${error.message}`);
   }
 }

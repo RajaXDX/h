@@ -158,7 +158,7 @@ function goToCategories() {
   teamSetup.B.name = document.getElementById('setupNameB')?.value?.trim() || 'الفريق الثاني';
 
   if (teamSetup.A.lifelines.length < 3 || teamSetup.B.lifelines.length < 3) {
-    alert('لازم كل فريق يختار 3 وسائل مساعدة بالضبط');
+    uiAlert('لازم كل فريق يختار 3 وسائل مساعدة بالضبط');
     return;
   }
 
@@ -215,7 +215,7 @@ async function addCustomCategory() {
 
   if (CATEGORIES.some(c => c.name === name) || selectedCats.some(c => c.name === name)) {
     input.value = '';
-    alert('هذه الفئة موجودة بالفعل');
+    uiAlert('هذه الفئة موجودة بالفعل');
     return;
   }
 
@@ -273,7 +273,7 @@ function startGame() {
     const teamA = roomPlayers.filter(p => p.team === 'A');
     const teamB = roomPlayers.filter(p => p.team === 'B');
     if (teamA.length === 0 || teamB.length === 0) {
-      alert('❌ لم يتم توزيع اللاعبين بشكل صحيح');
+      uiAlert('❌ لم يتم توزيع اللاعبين بشكل صحيح');
       return;
     }
   }
@@ -491,7 +491,7 @@ function renderLifelineDisplay() {
 let activeLifeline = null;
 let friendCallTimer = null;
 
-function useLifeline(team, key) {
+async function useLifeline(team, key) {
   // في الأونلاين المضيف وحده يفعّلها (هو من يدير اللعب)
   if (isOnlineGame() && !currentPlayer?.is_host) {
     log('صاحب الروم هو من يفعّل وسائل المساعدة', 'info');
@@ -505,16 +505,16 @@ function useLifeline(team, key) {
 
   // كلها تُستعمل أثناء سؤال مفتوح ما عدا لا شيء — نطلب فتح سؤال أولاً
   if (!current) {
-    alert(`${l.ic} ${l.name}\n\n${l.desc}\n\nافتح السؤال أولاً ثم فعّلها.`);
+    uiAlert(`${l.ic} ${l.name}\n\n${l.desc}\n\nافتح السؤال أولاً ثم فعّلها.`);
     return;
   }
 
   if (activeLifeline) {
-    alert('⚠️ فيه وسيلة مساعدة مفعّلة على هذا السؤال بالفعل');
+    uiAlert('⚠️ فيه وسيلة مساعدة مفعّلة على هذا السؤال بالفعل');
     return;
   }
 
-  if (!confirm(`${l.ic} تفعيل «${l.name}» لفريق ${getTeamName(team)}؟\n\n${l.desc}\n\nتُستخدم مرة واحدة فقط طوال اللعبة.`)) {
+  if (!await uiConfirm(`${l.ic} تفعيل «${l.name}» لفريق ${getTeamName(team)}؟\n\n${l.desc}\n\nتُستخدم مرة واحدة فقط طوال اللعبة.`)) {
     return;
   }
 
@@ -584,8 +584,8 @@ function clearActiveLifeline() {
   renderLifelineBanner();
 }
 
-function backToSetupConfirm() {
-  if (confirm('بدء لعبة جديدة؟ بيروح كل التقدم الحالي')) {
+async function backToSetupConfirm() {
+  if (await uiConfirm('بدء لعبة جديدة؟ بيروح كل التقدم الحالي')) {
     selectedCats = [];
     questionCache = {};
     goToSetup();
@@ -716,7 +716,7 @@ async function quickAddAndShow(ci, row) {
   const emoji = document.getElementById('quickQEmoji')?.value?.trim() || '❓';
 
   if (!q || !a) {
-    alert('لازم تكتب السؤال والإجابة');
+    uiAlert('لازم تكتب السؤال والإجابة');
     return;
   }
 
@@ -822,7 +822,7 @@ function award(team, opts = {}) {
   // «الفخ»: إذا أجاب الفريق الآخر صحيحاً، تذهب النقاط لصاحب الفخ
   if (team && activeLifeline?.key === 'fakh' && team !== activeLifeline.team) {
     const trapper = activeLifeline.team;
-    alert(`🪤 وقع ${getTeamName(team)} في فخ ${getTeamName(trapper)}!\nالنقاط (${pts}) تذهب لـ ${getTeamName(trapper)}.`);
+    uiAlert(`🪤 وقع ${getTeamName(team)} في فخ ${getTeamName(trapper)}!\nالنقاط (${pts}) تذهب لـ ${getTeamName(trapper)}.`);
     team = trapper;
   }
 
@@ -1193,15 +1193,15 @@ function selectRoomToJoin(roomCode) {
   document.getElementById('playerNameInput')?.focus();
 }
 
-function showCreateRoomDialog() {
-  const roomName = prompt('اسم الروم:', 'جلسة اللعب');
+async function showCreateRoomDialog() {
+  const roomName = await uiPrompt('اسم الروم:', 'جلسة اللعب');
   if (!roomName) return;
 
   createRoomAndEnter(roomName);
 }
 
 async function createRoomAndEnter(roomName) {
-  const playerName = prompt('اسمك:', 'اللاعب');
+  const playerName = await uiPrompt('اسمك:', 'اللاعب');
   if (!playerName?.trim()) return;
 
   // الاسم يُمرَّر لـ createRoom حتى يُحفظ في السحابة صحيحاً منذ البداية،
@@ -1215,12 +1215,12 @@ async function joinRoomByCode() {
   const playerName = document.getElementById('playerNameInput')?.value;
 
   if (!roomCode || roomCode.length < 4) {
-    alert('❌ أدخل كود الروم');
+    uiAlert('❌ أدخل كود الروم');
     return;
   }
 
   if (!playerName) {
-    alert('❌ أدخل اسمك');
+    uiAlert('❌ أدخل اسمك');
     return;
   }
 
@@ -1260,14 +1260,14 @@ async function updateRoomSetupDisplay() {
 
 async function startGameOnline() {
   if (!currentPlayer?.is_host) {
-    alert('❌ فقط صاحب الروم يمكنه بدء اللعبة');
+    uiAlert('❌ فقط صاحب الروم يمكنه بدء اللعبة');
     return;
   }
 
   // التحقق من أن جميع اللاعبين لهم فريق
   const playersWithoutTeam = roomPlayers.filter(p => !p.team);
   if (playersWithoutTeam.length > 0) {
-    alert('❌ يجب توزيع جميع اللاعبين على الفرق أولاً');
+    uiAlert('❌ يجب توزيع جميع اللاعبين على الفرق أولاً');
     return;
   }
 

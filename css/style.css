@@ -1993,3 +1993,112 @@ footer p {
 .team-lifelines .ic:not(.used):hover {
   transform: scale(1.15);
 }
+
+/* ============================= UI MODALS & TOASTS ============================= */
+
+.ui-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.62);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 500;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.ui-modal-overlay.show { opacity: 1; }
+
+.ui-modal {
+  width: min(420px, 100%);
+  background: var(--night-2);
+  border: 2px solid var(--gold);
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+  transform: scale(0.94);
+  transition: transform 0.18s ease;
+}
+
+.ui-modal-overlay.show .ui-modal { transform: scale(1); }
+
+.ui-modal-msg {
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.7;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.ui-modal-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--gold);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--text);
+  font-family: 'Tajawal', sans-serif;
+  font-size: 16px;
+  margin-bottom: 16px;
+}
+
+.ui-modal-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.35);
+}
+
+.ui-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.ui-modal-actions .btn-main {
+  flex: 1;
+  min-height: 44px;
+  padding: 10px 16px;
+}
+
+/* الإشعارات */
+.ui-toasts {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 600;
+  pointer-events: none;
+  width: min(440px, calc(100% - 32px));
+}
+
+.ui-toast {
+  background: var(--night-2);
+  border: 1px solid var(--gold);
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.6;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transform: translateY(-12px);
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.ui-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+  .ui-modal { padding: 18px; }
+  .ui-modal-msg { font-size: 15px; }
+  .ui-modal-actions { flex-direction: column-reverse; }
+}

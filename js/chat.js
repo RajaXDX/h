@@ -6,7 +6,7 @@ let chatOpen = false;
 
 async function sendChatMessage(messageText) {
   if (!currentRoom || !currentPlayer) {
-    alert('❌ يجب أن تكون في روم أولاً');
+    uiAlert('❌ يجب أن تكون في روم أولاً');
     return false;
   }
 
