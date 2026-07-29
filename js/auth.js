@@ -22,6 +22,15 @@ const REQUIRE_ACCOUNT = true;
 
 const ACCOUNT_EMAIL_DOMAIN = 'raja-players.com';
 
+// زر «نسيت كلمة المرور؟».
+//
+// مطفأ مؤقتاً: Resend يرسل من onboarding@resend.dev الذي لا يصل إلا لبريد
+// صاحب حساب Resend نفسه. فأي لاعب آخر يطلب استعادة سيقرأ «وصلك رابط» ولا
+// يصله شيء — وهذا أسوأ من عدم عرض الزر.
+//
+// أعده إلى true بعد توثيق نطاق في Resend. الكود كله جاهز ولا يحتاج تعديلاً آخر.
+const ENABLE_PASSWORD_RECOVERY = false;
+
 let currentProfile = null;
 
 /* ---- اسم المستخدم ---- */
@@ -347,7 +356,7 @@ function switchAuthTab(mode) {
   show('authUsernameRow', conf.user);
   show('authEmailRow', conf.email);
   show('authPasswordRow', conf.pass);
-  show('authForgotBtn', conf.forgot);
+  show('authForgotBtn', conf.forgot && ENABLE_PASSWORD_RECOVERY);
 
   const userLabel = document.querySelector('#authUsernameRow label');
   if (userLabel && conf.userLabel) userLabel.textContent = conf.userLabel;
