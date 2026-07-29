@@ -20,8 +20,9 @@ async function addFriendByUsername(rawName) {
   if (name === currentProfile.username) return { error: 'لا يمكنك إضافة نفسك' };
 
   try {
-    const { data: target, error: findError } = await supa
-      .from('profiles').select('id, username').eq('username', name).maybeSingle();
+    // بعد إغلاق قراءة profiles، البحث يمرّ عبر دالة تُعيد المعرّف والاسم فقط
+    const { data: found, error: findError } = await supa.rpc('find_player', { target_username: name });
+    const target = Array.isArray(found) ? found[0] : found;
 
     if (findError) {
       if (/schema cache|does not exist/i.test(findError.message)) {
@@ -61,42 +62,27 @@ async function loadFriends() {
   if (!supa || !isSignedIn()) return friendsCache;
 
   try {
-    const me = currentProfile.id;
-
-    const { data, error } = await supa
-      .from('friendships')
-      .select('id, requester_id, addressee_id, status, created_at')
-      .order('created_at', { ascending: false });
-
+    // دالة واحدة تُعيد العلاقات مع أسماء الأطراف — الضمّ لم يعد ممكناً
+    // من المتصفح بعد إغلاق قراءة profiles
+    const { data, error } = await supa.rpc('list_my_friends');
     if (error) throw error;
 
     const rows = data || [];
 
-    // نجلب أسماء كل الأطراف الأخرى دفعة واحدة
-    const otherIds = [...new Set(rows.map(r => r.requester_id === me ? r.addressee_id : r.requester_id))];
-    let names = {};
-    if (otherIds.length) {
-      const { data: profs } = await supa
-        .from('profiles').select('id, username, games_won, games_played').in('id', otherIds);
-      (profs || []).forEach(p => { names[p.id] = p; });
-    }
-
-    const decorate = r => {
-      const otherId = r.requester_id === me ? r.addressee_id : r.requester_id;
-      const p = names[otherId] || {};
-      return {
-        id: r.id,
-        userId: otherId,
-        username: p.username || 'لاعب محذوف',
-        gamesWon: p.games_won || 0,
-        gamesPlayed: p.games_played || 0
-      };
-    };
+    const decorate = r => ({
+      id: r.row_id,
+      userId: r.other_id,
+      username: r.username || 'لاعب محذوف',
+      privacy: r.privacy,
+      gamesWon: r.games_won,
+      gamesPlayed: r.games_played,
+      totalScore: r.total_score
+    });
 
     friendsCache = {
-      accepted: rows.filter(r => r.status === 'accepted').map(decorate),
-      incoming: rows.filter(r => r.status === 'pending' && r.addressee_id === me).map(decorate),
-      outgoing: rows.filter(r => r.status === 'pending' && r.requester_id === me).map(decorate)
+      accepted: rows.filter(r => r.direction === 'friend').map(decorate),
+      incoming: rows.filter(r => r.direction === 'incoming').map(decorate),
+      outgoing: rows.filter(r => r.direction === 'outgoing').map(decorate)
     };
 
     return friendsCache;

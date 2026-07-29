@@ -2647,3 +2647,137 @@ select {
   .friend-actions { width: 100%; }
   .friend-actions .btn { flex: 1; }
 }
+
+/* ============================= PROFILE & PRIVACY ============================= */
+
+.profile-container { max-width: 620px; margin: 0 auto; }
+
+.privacy-box,
+.profile-section {
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.privacy-title,
+.profile-section-title {
+  font-family: 'Cairo', sans-serif;
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--sand);
+  margin-bottom: 12px;
+}
+
+.privacy-options { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.privacy-btn {
+  flex: 1;
+  min-width: 90px;
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 6px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  border-radius: 10px;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: 'Tajawal', sans-serif;
+  transition: all 0.2s;
+}
+
+.privacy-btn.active {
+  background: rgba(212, 175, 55, 0.16);
+  border-color: var(--gold);
+  color: var(--sand);
+}
+
+.privacy-ic { font-size: 22px; }
+.privacy-name { font-size: 13px; font-weight: 700; }
+
+.privacy-desc {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* بطاقة اللاعب */
+.player-card {
+  margin-top: 12px;
+  padding: 14px;
+  background: rgba(0, 0, 0, 0.24);
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  border-radius: 12px;
+}
+
+.pc-name {
+  font-family: 'Cairo', sans-serif;
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--sand);
+  margin-bottom: 12px;
+}
+
+.pc-rel { font-size: 13px; color: var(--gold); font-weight: 400; }
+
+.pc-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.pc-stats > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 4px;
+  background: rgba(212, 175, 55, 0.08);
+  border-radius: 8px;
+}
+
+.pc-stats span { font-size: 18px; }
+.pc-stats b { font-family: 'Cairo', sans-serif; font-size: 17px; color: var(--gold); }
+.pc-stats small { font-size: 13px; color: var(--muted); }
+
+.pc-private {
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+  padding: 10px;
+}
+
+.pc-loading, .pc-error { color: var(--muted); font-size: 13px; text-align: center; }
+.pc-error { color: var(--error); }
+
+/* لوحة الصدارة */
+.lb-list { display: flex; flex-direction: column; gap: 6px; }
+
+.lb-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(212, 175, 55, 0.15);
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.lb-row.me { border-color: var(--gold); background: rgba(212, 175, 55, 0.1); }
+.lb-rank { min-width: 28px; font-size: 17px; text-align: center; }
+.lb-name { flex: 1; color: var(--sand); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-score, .lb-wins { color: var(--gold); font-size: 13px; white-space: nowrap; }
+
+.lb-note { font-size: 13px; color: var(--muted); text-align: center; margin-top: 10px; }
+
+@media (max-width: 768px) {
+  .pc-stats { grid-template-columns: repeat(2, 1fr); }
+  .privacy-btn { min-width: 0; }
+}
