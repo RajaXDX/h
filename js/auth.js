@@ -289,6 +289,8 @@ async function handleAuthSubmit(mode) {
   document.getElementById('authPassword').value = '';
   renderAuthState();
 
+  refreshFriendBadge?.();
+
   // أكمل إلى الروم الذي دُعي إليه إن كان جاء من رابط، وإلا للرئيسية
   const resumed = await handleRoomLinkOnLoad();
   if (!resumed) goToModeSelect();
@@ -309,6 +311,8 @@ async function initAuthGate() {
     showScreen('screen-auth');
     return false;
   }
+
+  refreshFriendBadge?.();
   return true;
 }
 
