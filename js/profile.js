@@ -80,12 +80,17 @@ async function showPlayerCard(username) {
       return;
     }
 
+    // أسماء أعمدة الإخراج مسبوقة بـ out_ لتفادي التباسها بأعمدة الجدول
+    // داخل plpgsql — الالتباس كان يمنع إنشاء الدالة أصلاً
+    const uname = card.out_username ?? card.username;
+    const priv  = card.out_privacy  ?? card.privacy;
+
     const rel = card.is_me ? '(أنت)' : (card.is_friend ? '🤝 صديقك' : '');
 
     // visible تأتي من قاعدة البيانات لا من حساب في المتصفح
     box.innerHTML = card.visible ? `
       <div class="player-card">
-        <div class="pc-name">👤 ${escapeHtml(card.username)} <span class="pc-rel">${rel}</span></div>
+        <div class="pc-name">👤 ${escapeHtml(uname)} <span class="pc-rel">${rel}</span></div>
         <div class="pc-stats">
           <div><span>🎮</span><b>${Number(card.games_played) || 0}</b><small>جولة</small></div>
           <div><span>🏆</span><b>${Number(card.games_won) || 0}</b><small>فوز</small></div>
@@ -94,8 +99,8 @@ async function showPlayerCard(username) {
         </div>
       </div>` : `
       <div class="player-card">
-        <div class="pc-name">👤 ${escapeHtml(card.username)} <span class="pc-rel">${rel}</span></div>
-        <div class="pc-private">🔒 ${card.privacy === 'friends'
+        <div class="pc-name">👤 ${escapeHtml(uname)} <span class="pc-rel">${rel}</span></div>
+        <div class="pc-private">🔒 ${priv === 'friends'
           ? 'يشارك إحصاءاته مع أصدقائه فقط'
           : 'هذا الحساب خاص'}</div>
       </div>`;

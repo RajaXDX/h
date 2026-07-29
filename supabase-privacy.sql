@@ -45,14 +45,14 @@ LANGUAGE SQL
 SECURITY DEFINER
 SET search_path = public
 STABLE
-AS $$
+AS $fn$
   SELECT EXISTS (
     SELECT 1 FROM friendships
     WHERE status = 'accepted'
       AND ((requester_id = a AND addressee_id = b)
         OR (requester_id = b AND addressee_id = a))
   );
-$$;
+$fn$;
 
 
 -- ============================= 4) البحث عن لاعب بالاسم =============================
@@ -63,11 +63,11 @@ LANGUAGE SQL
 SECURITY DEFINER
 SET search_path = public
 STABLE
-AS $$
+AS $fn$
   SELECT p.id, p.username FROM profiles p
   WHERE p.username = lower(trim(target_username))
   LIMIT 1;
-$$;
+$fn$;
 
 REVOKE ALL ON FUNCTION find_player(TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION find_player(TEXT) TO authenticated;
@@ -78,8 +78,8 @@ GRANT EXECUTE ON FUNCTION find_player(TEXT) TO authenticated;
 -- visible تخبر الواجهة هل تعرض الأرقام أم رسالة «الحساب خاص».
 CREATE OR REPLACE FUNCTION get_player_card(target_username TEXT)
 RETURNS TABLE (
-  username      TEXT,
-  privacy       TEXT,
+  out_username  TEXT,
+  out_privacy   TEXT,
   visible       BOOLEAN,
   is_friend     BOOLEAN,
   is_me         BOOLEAN,
@@ -93,7 +93,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 STABLE
-AS $$
+AS $fn$
 DECLARE
   me  UUID := auth.uid();
   p   profiles%ROWTYPE;
@@ -123,7 +123,7 @@ BEGIN
     CASE WHEN ok THEN p.rooms_created ELSE NULL END,
     CASE WHEN ok THEN p.created_at    ELSE NULL END;
 END;
-$$;
+$fn$;
 
 REVOKE ALL ON FUNCTION get_player_card(TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION get_player_card(TEXT) TO authenticated;
@@ -147,7 +147,7 @@ LANGUAGE SQL
 SECURITY DEFINER
 SET search_path = public
 STABLE
-AS $$
+AS $fn$
   SELECT
     f.id,
     CASE WHEN f.requester_id = auth.uid() THEN f.addressee_id ELSE f.requester_id END,
@@ -168,7 +168,7 @@ AS $$
                                  THEN f.addressee_id ELSE f.requester_id END
   WHERE f.requester_id = auth.uid() OR f.addressee_id = auth.uid()
   ORDER BY f.created_at DESC;
-$$;
+$fn$;
 
 REVOKE ALL ON FUNCTION list_my_friends() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION list_my_friends() TO authenticated;
@@ -187,13 +187,13 @@ LANGUAGE SQL
 SECURITY DEFINER
 SET search_path = public
 STABLE
-AS $$
+AS $fn$
   SELECT p.username, p.games_played, p.games_won, p.total_score
   FROM profiles p
   WHERE p.privacy = 'public' AND p.games_played > 0
   ORDER BY p.total_score DESC, p.games_won DESC
   LIMIT LEAST(GREATEST(limit_n, 1), 100);
-$$;
+$fn$;
 
 REVOKE ALL ON FUNCTION leaderboard(INTEGER) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION leaderboard(INTEGER) TO authenticated;
