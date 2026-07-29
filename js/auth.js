@@ -318,6 +318,9 @@ async function initAuthGate() {
 
   if (!isSignedIn()) {
     showScreen('screen-auth');
+    // لازم تُستدعى هنا: بدونها تظهر الشاشة بحالة HTML الافتراضية،
+    // فيبقى زر «نسيت كلمة المرور؟» ظاهراً رغم إطفائه بالمفتاح
+    switchAuthTab('login');
     return false;
   }
 
