@@ -149,6 +149,7 @@ async function signInPlayer(identifier, password) {
 }
 
 async function signOutPlayer() {
+  unsubscribeFromInvites?.();
   try { await supa?.auth.signOut(); } catch (e) { console.warn(e); }
   currentProfile = null;
   isAdminLoggedIn = false;
@@ -297,6 +298,8 @@ async function handleAuthSubmit(mode) {
 
   document.getElementById('authPassword').value = '';
   renderAuthState();
+  subscribeToInvites?.();
+  checkPendingInvites?.();
 
   refreshFriendBadge?.();
 
@@ -315,6 +318,12 @@ async function initAuthGate() {
 
   if (!REQUIRE_ACCOUNT) return true;
   renderAuthState();
+
+  if (isSignedIn()) {
+    // الاستماع للدعوات + عرض ما وصل أثناء الغياب
+    subscribeToInvites?.();
+    checkPendingInvites?.();
+  }
 
   if (!isSignedIn()) {
     showScreen('screen-auth');

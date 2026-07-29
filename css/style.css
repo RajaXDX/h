@@ -2781,3 +2781,91 @@ select {
   .pc-stats { grid-template-columns: repeat(2, 1fr); }
   .privacy-btn { min-width: 0; }
 }
+
+/* ============================= ROOM INVITES ============================= */
+
+.invite-picker {
+  margin-top: 12px;
+  padding: 14px;
+  background: rgba(0, 0, 0, 0.24);
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  border-radius: 12px;
+}
+
+.invite-title {
+  font-size: 14px;
+  color: var(--sand);
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.invite-list { display: flex; flex-direction: column; gap: 8px; }
+
+.invite-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(212, 175, 55, 0.07);
+  border-radius: 8px;
+}
+
+.invite-name { color: var(--text); font-size: 14px; }
+
+.invite-btn { min-height: 40px; white-space: nowrap; }
+.invite-btn.sent { opacity: 0.65; }
+
+.invite-empty {
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+/* لافتة الدعوة الواردة */
+.invite-banner {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  width: min(460px, calc(100% - 24px));
+  padding: 14px 16px;
+  background: var(--night-2);
+  border: 2px solid var(--gold);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  z-index: 700;
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.invite-banner.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.ib-text {
+  color: var(--text);
+  font-size: 15px;
+  text-align: center;
+  margin-bottom: 10px;
+  line-height: 1.7;
+}
+
+.ib-text code {
+  background: rgba(212, 175, 55, 0.16);
+  color: var(--gold);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-family: monospace;
+  letter-spacing: 1px;
+}
+
+.ib-actions { display: flex; gap: 8px; justify-content: center; }
+.ib-actions .btn { flex: 1; max-width: 140px; min-height: 44px; }
+
+@media (max-width: 768px) {
+  .invite-row { flex-direction: column; align-items: stretch; }
+  .invite-btn { width: 100%; }
+}

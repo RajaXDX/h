@@ -224,3 +224,167 @@ async function refreshFriendBadge() {
   const f = await loadFriends();
   updateFriendRequestsBadge(f.incoming.length);
 }
+
+/* ============================= ROOM INVITES ============================= */
+/*
+  دعوة صديق إلى الروم. الدعوة تصل داخل اللعبة لحظياً عبر Realtime.
+
+  شرط الصداقة مفروض في الدالة داخل قاعدة البيانات لا هنا — ولا توجد سياسة
+  INSERT على الجدول أصلاً، فلا يستطيع أحد إغراق لاعب بالدعوات.
+
+  يتطلّب تشغيل supabase-invites.sql.
+*/
+
+let inviteSubscription = null;
+
+// فتح قائمة الأصدقاء للاختيار منهم
+async function openInvitePicker() {
+  if (!currentRoom) return;
+
+  const box = document.getElementById('invitePickerBox');
+  if (!box) return;
+
+  const open = box.style.display !== 'none';
+  if (open) { box.style.display = 'none'; return; }
+
+  Sound.click();
+  box.style.display = 'block';
+  box.innerHTML = '<p class="pc-loading">جاري التحميل...</p>';
+
+  await loadFriends();
+  const friends = friendsCache.accepted || [];
+
+  if (!friends.length) {
+    box.innerHTML = `
+      <p class="invite-empty">ما عندك أصدقاء بعد.</p>
+      <button class="btn btn-ghost" onclick="goToFriends()">🤝 أضف أصدقاء</button>`;
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="invite-title">اختر من تدعو:</div>
+    <div class="invite-list">
+      ${friends.map(f => `
+        <div class="invite-row" id="inviteRow-${escapeHtml(f.userId)}">
+          <span class="invite-name">👤 ${escapeHtml(f.username)}</span>
+          <button class="btn btn-answer invite-btn"
+                  onclick="inviteFriendToRoom('${escapeHtml(f.userId)}', '${escapeHtml(f.username).replace(/'/g, "\'")}')">
+            📨 دعوة
+          </button>
+        </div>`).join('')}
+    </div>`;
+}
+
+async function inviteFriendToRoom(userId, username) {
+  if (!currentRoom) return;
+
+  const row = document.getElementById(`inviteRow-${userId}`);
+  const btn = row?.querySelector('.invite-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+
+  try {
+    const { data, error } = await supa.rpc('invite_friend', {
+      target_id: userId,
+      r_id: currentRoom.id,
+      r_code: currentRoom.code
+    });
+
+    if (error) throw error;
+
+    if (btn) {
+      btn.textContent = data === 'already_invited' ? '✓ مدعوّ' : '✅ أُرسلت';
+      btn.classList.add('sent');
+    }
+    Sound.award();
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = '📨 دعوة'; }
+    uiAlert(`❌ ${e.message || 'تعذّر إرسال الدعوة'}`);
+  }
+}
+
+/* ---- استقبال الدعوات ---- */
+
+// لافتة تظهر أعلى الشاشة عند وصول دعوة
+function showInviteBanner(inviteId, roomCode, fromName) {
+  document.getElementById('inviteBanner')?.remove();
+
+  const banner = createElement('div', { id: 'inviteBanner', class: 'invite-banner' }, `
+    <div class="ib-text">🎮 <b>${escapeHtml(fromName)}</b> يدعوك لروم <code>${escapeHtml(roomCode)}</code></div>
+    <div class="ib-actions">
+      <button class="btn btn-answer" onclick="acceptInvite(${Number(inviteId)}, '${escapeHtml(roomCode)}')">دخول</button>
+      <button class="btn btn-ghost" onclick="dismissInvite(${Number(inviteId)})">لاحقاً</button>
+    </div>
+  `);
+
+  document.body.appendChild(banner);
+  requestAnimationFrame(() => banner.classList.add('show'));
+  Sound.open();
+
+  // تختفي وحدها بعد دقيقة حتى لا تبقى معلّقة
+  setTimeout(() => banner.remove(), 60000);
+}
+
+async function acceptInvite(inviteId, roomCode) {
+  document.getElementById('inviteBanner')?.remove();
+  Sound.click();
+
+  try { await supa.from('room_invites').delete().eq('id', inviteId); } catch (e) { /* غير مهم */ }
+
+  if (currentRoom) await leaveRoom();
+
+  const ok = await joinRoom(roomCode, getPlayerDisplayName());
+  if (ok) {
+    await getRoomPlayers();
+    goToRoomSetup();
+  }
+}
+
+async function dismissInvite(inviteId) {
+  document.getElementById('inviteBanner')?.remove();
+  try { await supa.from('room_invites').delete().eq('id', inviteId); } catch (e) { /* غير مهم */ }
+}
+
+// دعوات وصلت والمستخدم غير متصل — نعرضها عند الدخول
+async function checkPendingInvites() {
+  if (!supa || !isSignedIn()) return;
+
+  try {
+    const { data, error } = await supa.rpc('my_invites');
+    if (error || !data?.length) return;
+
+    const inv = data[0];
+    showInviteBanner(inv.invite_id, inv.room_code, inv.from_name);
+  } catch (e) { /* لا يعطّل شيئاً */ }
+}
+
+// الاستماع اللحظي للدعوات الجديدة
+function subscribeToInvites() {
+  if (!supa || !currentProfile || inviteSubscription) return;
+
+  try {
+    inviteSubscription = supa
+      .channel(`invites_${currentProfile.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'room_invites',
+        filter: `to_user=eq.${currentProfile.id}`
+      }, async (payload) => {
+        const inv = payload.new;
+        // نجلب اسم الداعي عبر الدالة — profiles مغلق
+        const { data } = await supa.rpc('my_invites');
+        const match = (data || []).find(d => d.invite_id === inv.id);
+        showInviteBanner(inv.id, inv.room_code, match?.from_name || 'صديقك');
+      })
+      .subscribe();
+  } catch (e) {
+    console.warn('تعذّر الاشتراك في الدعوات:', e);
+  }
+}
+
+function unsubscribeFromInvites() {
+  if (inviteSubscription) {
+    supa?.removeChannel(inviteSubscription);
+    inviteSubscription = null;
+  }
+}

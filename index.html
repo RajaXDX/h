@@ -30,8 +30,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800;900&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
   <!-- ?v= رقم الإصدار: غيّره عند أي تعديل حتى تصل النسخة الجديدة للمتصفحات بدون Ctrl+Shift+R -->
-  <link rel="stylesheet" href="css/style.css?v=20260728q">
-  <link rel="stylesheet" href="css/responsive.css?v=20260728q">
+  <link rel="stylesheet" href="css/style.css?v=20260728r">
+  <link rel="stylesheet" href="css/responsive.css?v=20260728r">
 </head>
 <body>
 
@@ -263,7 +263,11 @@
       <button class="btn-main btn-ghost" id="copyLinkBtn" onclick="copyRoomLink()">
         <span class="btn-icon">🔗</span><span>نسخ الرابط</span>
       </button>
+      <button class="btn-main btn-secondary" onclick="openInvitePicker()">
+        <span class="btn-icon">🤝</span><span>دعوة صديق</span>
+      </button>
     </div>
+    <div id="invitePickerBox" class="invite-picker" style="display:none;"></div>
   </div>
 
   <div class="room-players-section">
@@ -499,16 +503,16 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <!-- ملفات JS الرئيسية -->
-<script src="js/supabase-config.js?v=20260728q"></script>
-<script src="js/utils.js?v=20260728q"></script>
-<script src="js/auth.js?v=20260728q"></script>
-<script src="js/friends.js?v=20260728q"></script>
-<script src="js/profile.js?v=20260728q"></script>
-<script src="js/game.js?v=20260728q"></script>
-<script src="js/admin.js?v=20260728q"></script>
-<script src="js/sync.js?v=20260728q"></script>
-<script src="js/rooms.js?v=20260728q"></script>
-<script src="js/chat.js?v=20260728q"></script>
+<script src="js/supabase-config.js?v=20260728r"></script>
+<script src="js/utils.js?v=20260728r"></script>
+<script src="js/auth.js?v=20260728r"></script>
+<script src="js/friends.js?v=20260728r"></script>
+<script src="js/profile.js?v=20260728r"></script>
+<script src="js/game.js?v=20260728r"></script>
+<script src="js/admin.js?v=20260728r"></script>
+<script src="js/sync.js?v=20260728r"></script>
+<script src="js/rooms.js?v=20260728r"></script>
+<script src="js/chat.js?v=20260728r"></script>
 
 </body>
 </html>
