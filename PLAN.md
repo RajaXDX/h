@@ -52,11 +52,34 @@ supabase-analytics.sql      جدول app_events
 supabase-accounts.sql       profiles + admins + دوال الإدارة
 supabase-friends.sql        جدول friendships + request_friend
 supabase-privacy.sql        عمود privacy + دوال البطاقة والصدارة
+supabase-invites.sql        جدول room_invites + invite_friend + my_invites
 ```
 
 ---
 
 ## 3. الحالة الحالية — ما أُنجز ✅
+
+### سكربتات Supabase — كلها مُشغَّلة ✅ (2026-07-29)
+
+| الملف | ما يضيفه | الحالة |
+|---|---|---|
+| `supabase-setup.sql` | الجداول الأساسية والرومات | ✅ مُشغَّل |
+| `supabase-admin-security.sql` | سياسات `game_settings` | ✅ مُشغَّل |
+| `supabase-analytics.sql` | `app_events` | ✅ مُشغَّل |
+| `supabase-accounts.sql` | `profiles` + `admins` + دوال الإدارة | ✅ مُشغَّل |
+| `supabase-friends.sql` | `friendships` + `request_friend` | ✅ مُشغَّل |
+| `supabase-privacy.sql` | `privacy` + دوال البطاقة والصدارة | ✅ مُشغَّل |
+| `supabase-invites.sql` | `room_invites` + دعوة الأصدقاء | ✅ مُشغَّل |
+
+**لا يوجد سكربت معلّق.** أي سكربت جديد يُكتب مستقبلاً: شغّله على دفعات
+(راجع الملاحظة 11 أدناه).
+
+### إعدادات Supabase المضبوطة
+- **Confirm email**: معطّل
+- **SMTP**: Resend عبر `onboarding@resend.dev`
+- **Site URL** و **Redirect URLs**: مضبوطان على رابط GitHub Pages
+- **حساب الإدارة**: `vip` (عبر جدول `admins`)
+
 
 ### بنك الأسئلة
 **2,160 سؤال فريد في 36 فئة** موزّعة على 11 ملف JSON، وكل فئة **20/20/20 على الأقل**.
@@ -314,6 +337,24 @@ supabase-privacy.sql        عمود privacy + دوال البطاقة والص�
   (يتطلّب SMTP أولاً وإلا عَلِق المسجّلون خارج اللعبة)
 
 - [ ] **خيارات مكتوبة يدوياً** بدل المولّدة — 6,480 خياراً، عمل كبير منفصل
+
+---
+
+---
+
+## 5.5 خلاصة الجاهزية
+
+**اللعبة منشورة وتعمل.** كل commit يُنشر تلقائياً على GitHub Pages.
+
+**لا يوجد عمل برمجي معلّق.** المتبقي كله إما خارج الكود (نطاق) أو تحسين
+اختياري.
+
+**العائق الوحيد أمام النشر الواسع:** لا نطاق ← لا توثيق في Resend ← استعادة
+كلمة المرور لا تصل لأي لاعب غير المالك ← الزر مخفي. اللاعب الذي ينسى كلمته
+يعلق، ويُحل يدوياً من SQL Editor.
+
+**ما لم يُختبر بعد:** لم يلعبها إنسان من البداية للنهاية. كل الاختبارات
+آلية. جلسة حقيقية واحدة أولى من أي ميزة إضافية.
 
 ---
 
