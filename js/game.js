@@ -729,17 +729,170 @@ function renderBoard() {
   نوسّع للمستويات الأخرى في الفئة نفسها ثم لبقية الفئات.
 */
 
+// مجموعات من نفس النوع. لو كانت الإجابة الصحيحة من إحداها، نسحب المشتّتات
+// منها فتكون منطقية: «آسيا» تنافسها قارات لا «كنتاكي» و«تمر».
+const ANSWER_POOLS = [
+  ['آسيا','أفريقيا','أوروبا','أمريكا الشمالية','أمريكا الجنوبية','أستراليا','أنتاركتيكا'],
+
+  ['الرياض','مكة المكرمة','المدينة المنورة','القصيم','الشرقية','عسير','تبوك',
+   'حائل','الحدود الشمالية','جازان','نجران','الباحة','الجوف'],
+
+  ['الرياض','جدة','الدمام','الخبر','الطائف','أبها','بريدة','خميس مشيط',
+   'الجبيل','ينبع','الأحساء','عرعر','سكاكا','القطيف'],
+
+  ['السعودية','مصر','الإمارات','الكويت','قطر','البحرين','عُمان','الأردن',
+   'لبنان','سوريا','العراق','اليمن','المغرب','الجزائر','تونس','ليبيا','السودان'],
+
+  ['أمريكا','بريطانيا','فرنسا','ألمانيا','إيطاليا','إسبانيا','اليابان','الصين',
+   'الهند','البرازيل','روسيا','تركيا','كندا','إيران','باكستان','إندونيسيا'],
+
+  ['عطارد','الزهرة','الأرض','المريخ','المشتري','زحل','أورانوس','نبتون'],
+
+  ['الأحمر','الأزرق','الأخضر','الأصفر','الأسود','الأبيض','البرتقالي',
+   'البنفسجي','الرمادي','البني','الوردي'],
+
+  ['الأسد','النمر','الفيل','الزرافة','الجمل','الحصان','الذئب','الدب','الغزال',
+   'النسر','الصقر','الحوت','الدلفين','القرش','التمساح','الفهد','وحيد القرن'],
+
+  ['القلب','الكبد','الرئة','الكلى','المعدة','الدماغ','الجلد','العين','الأذن',
+   'الطحال','البنكرياس','الأمعاء'],
+
+  ['محرم','صفر','ربيع الأول','ربيع الآخر','جمادى الأولى','جمادى الآخرة','رجب',
+   'شعبان','رمضان','شوال','ذو القعدة','ذو الحجة'],
+
+  ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر',
+   'أكتوبر','نوفمبر','ديسمبر'],
+
+  ['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'],
+
+  ['الشمال','الجنوب','الشرق','الغرب','الشمال الشرقي','الشمال الغربي'],
+
+  ['المحيط الهادئ','المحيط الأطلسي','المحيط الهندي','المحيط المتجمد الشمالي',
+   'المحيط الجنوبي','البحر الأحمر','البحر المتوسط','الخليج العربي','بحر العرب'],
+
+  ['الذهب','الفضة','الحديد','النحاس','الألومنيوم','الرصاص','الزنك','البلاتين','التيتانيوم'],
+
+  ['الأكسجين','الهيدروجين','النيتروجين','ثاني أكسيد الكربون','الهيليوم','الكربون'],
+
+  ['أبو بكر الصديق','عمر بن الخطاب','عثمان بن عفان','علي بن أبي طالب'],
+
+  ['كرة القدم','كرة السلة','كرة الطائرة','التنس','السباحة','الجري','الملاكمة','الفروسية'],
+
+  ['الهلال','النصر','الاتحاد','الأهلي','الشباب','الاتفاق','التعاون','الفتح','الرائد'],
+
+  ['نوح','إبراهيم','موسى','عيسى','يوسف','يونس','سليمان','داود','أيوب','زكريا','هود','صالح'],
+
+  ['القاهرة','الرياض','دبي','الدوحة','الكويت','المنامة','مسقط','عمّان','بيروت',
+   'دمشق','بغداد','صنعاء','الرباط','الجزائر','تونس','طرابلس','الخرطوم'],
+
+  ['باريس','لندن','برلين','روما','مدريد','طوكيو','بكين','نيودلهي','موسكو',
+   'واشنطن','أنقرة','أوتاوا','برازيليا','جاكرتا'],
+
+  ['آبل','جوجل','مايكروسوفت','أمازون','ميتا','سامسونج','إنتل','إنفيديا','تسلا','سوني'],
+
+  ['واتساب','إنستغرام','سناب شات','تيك توك','يوتيوب','تويتر','تيليجرام','فيسبوك'],
+
+  ['القهوة','الشاي','الحليب','العصير','الماء','اللبن','الكركديه','النعناع'],
+
+  ['الكبسة','المندي','المظبي','الجريش','المرقوق','الهريس','السليق','المطازيز','العريكة'],
+
+  ['التمر','الرمان','العنب','التين','الموز','التفاح','البرتقال','المانجو','الفراولة','البطيخ'],
+
+  ['الهيل','الزعفران','القرفة','الكمون','الكزبرة','الفلفل الأسود','الزنجبيل','القرنفل'],
+
+  ['العود','المسك','العنبر','الورد','الياسمين','الصندل','الزعفران','البخور'],
+
+  ['الأنف','الفم','اليد','القدم','الرأس','الظهر','الرقبة','الكتف','الركبة','المرفق'],
+
+  ['البصر','السمع','الشم','الذوق','اللمس'],
+
+  ['الطويل','الكامل','الوافر','البسيط','الرجز','الرمل','المتقارب','الخفيف','السريع'],
+
+  ['المتنبي','أبو تمام','البحتري','أحمد شوقي','حافظ إبراهيم','امرؤ القيس',
+   'زهير بن أبي سلمى','الخنساء','أبو نواس','المعرّي','نزار قباني','محمود درويش'],
+
+  ['الأموية','العباسية','العثمانية','الفاطمية','الأيوبية','المملوكية','الأندلسية','السلجوقية'],
+
+  ['تويوتا','نيسان','هوندا','فورد','شيفروليه','مرسيدس','بي إم دبليو','أودي',
+   'لكزس','هيونداي','كيا','بورشه','فيراري','لامبورغيني'],
+
+  ['الماس','الياقوت','الزمرد','اللؤلؤ','الفيروز','العقيق','الزبرجد'],
+
+  ['النخيل','الزيتون','القمح','الأرز','الذرة','الشعير','القطن','البن'],
+
+  ['الأسبرين','البنسلين','الإنسولين','الباراسيتامول','المضاد الحيوي','اللقاح'],
+
+  ['فيتامين أ','فيتامين ب','فيتامين ج','فيتامين د','فيتامين هـ','فيتامين ك'],
+
+  ['المينا','العاج','اللب','الملاط','اللثة','الجذر','التاج'],
+
+  ['القواطع','الأنياب','الضواحك','الأضراس','ضرس العقل'],
+];
+
+// نبحث عن مجموعة تنتمي إليها الإجابة. المطابقة على النص المطبَّع، ونقبل
+// الاحتواء لأن الإجابة قد تكون «قارة آسيا» أو «آسيا (أكبر القارات)».
+function findAnswerPool(correct) {
+  const c = normalizeAnswer(correct);
+  if (!c) return null;
+
+  for (const pool of ANSWER_POOLS) {
+    const hit = pool.some(item => {
+      const n = normalizeAnswer(item);
+      if (!n) return false;
+      // مطابقة تامة، أو الإجابة هي العنصر متبوعاً بتوضيح: «آسيا (أكبر القارات)».
+      // ⚠️ لا نقبل الاحتواء في أي موضع: «الحوت الأزرق» كان يطابق مجموعة
+      // الألوان بسبب «الأزرق»، فتصير خياراته ألواناً.
+      return n === c || c.startsWith(n + ' ') || c.startsWith(n + '(');
+    });
+    if (hit) return pool;
+  }
+  return null;
+}
+
+// إجابة رقمية → مشتّتات رقمية قريبة، مع الحفاظ على وحدة القياس.
+// «206 عظمة» تنافسها «198 عظمة» لا «الرياض».
+function numericDistractors(correct, rand) {
+  const m = String(correct).match(/(\d[\d,]*)/);
+  if (!m) return null;
+
+  const raw = m[1].replace(/,/g, '');
+  const n = parseInt(raw, 10);
+  if (!Number.isFinite(n) || n === 0) return null;
+
+  const isYear = n >= 1000 && n <= 2100;
+  const out = new Set();
+  let guard = 0;
+
+  while (out.size < 3 && guard++ < 40) {
+    let v;
+    if (isYear) {
+      v = n + Math.floor(rand() * 21) - 10;
+    } else if (n <= 12) {
+      v = n + Math.floor(rand() * 7) - 3;
+    } else {
+      const spread = Math.max(2, Math.round(n * 0.35));
+      v = n + Math.floor(rand() * spread * 2) - spread;
+    }
+    if (v > 0 && v !== n) out.add(v);
+  }
+
+  if (out.size < 3) return null;
+  return [...out].map(v => correct.replace(m[1], String(v)));
+}
+
 function collectAnswerPool(categoryName, diffKey, exclude) {
   const seen = new Set([normalizeAnswer(exclude)]);
   const pool = [];
 
+  // نحتفظ بنص السؤال مع الإجابة: التشابه بين السؤالين أدلّ على تقارب
+  // نوع الإجابة من تشابه طول النص
   const take = (list) => {
     (list || []).forEach(q => {
       const a = String(q?.answer || '').trim();
       const key = normalizeAnswer(a);
       if (!a || seen.has(key)) return;
       seen.add(key);
-      pool.push(a);
+      pool.push({ answer: a, question: String(q?.question || '') });
     });
   };
 
@@ -776,38 +929,146 @@ function normalizeAnswer(text) {
     .toLowerCase();
 }
 
+// كلمات لا تميّز سؤالاً عن آخر، فاستبعادها يجعل المقارنة ذات معنى
+const STOP_WORDS = new Set([
+  'ما','ماهو','ماهي','هو','هي','من','في','على','عن','الى','إلى','التي','الذي',
+  'كم','اي','أي','هل','متى','اين','أين','كيف','لماذا','اسم','ماذا','هذه','هذا',
+  'يوجد','توجد','يعتبر','تعتبر','يسمى','تسمى','بين','مع','او','أو','و',
+  'كان','كانت','لها','له','بها','به','التالي','الاتي','عند','بعد','قبل','كل'
+]);
+
+function contentWords(text) {
+  return normalizeAnswer(text)
+    .replace(/[؟?.,،!:؛()«»"']/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 2 && !STOP_WORDS.has(w));
+}
+
+// كم كلمة دالة يتشاركها السؤالان؟ «ما أكبر قارة في العالم» و«ما أكبر محيط في
+// العالم» يتشاركان «اكبر» و«العالم» → إجابتهما من نوع متقارب
+function questionOverlap(wordsA, questionB) {
+  if (!wordsA.length) return 0;
+  const b = new Set(contentWords(questionB));
+  let hits = 0;
+  wordsA.forEach(w => { if (b.has(w)) hits++; });
+  return hits;
+}
+
+// شكل الإجابة — ما يجعل خياراً يكشف نفسه قبل أن يفكّر اللاعب:
+// رقم وسط كلمات، أو حروف لاتينية وسط عربي، أو سطر طويل وسط كلمتين.
+function answerShape(text) {
+  const t = String(text || '');
+  const ar = (t.match(/[ء-ي]/g) || []).length;
+  const la = (t.match(/[A-Za-z]/g) || []).length;
+  return {
+    digit: /\d/.test(t),
+    latin: la > ar,           // «Camelus dromedarius» لاتيني، «المقدمة (Top notes)» عربي
+    len: t.length,
+    words: t.split(/\s+/).filter(Boolean).length
+  };
+}
+
+// أول كلمة دالة في الإجابة. «طريق البخور» و«طريق الحج الشامي» يتشاركان
+// «طريق» — أقوى إشارة على أنهما من نوع واحد.
+function leadWord(text) {
+  return contentWords(text)[0] || '';
+}
+
+// مرشّحات متدرّجة: نبدأ بالأصرم، وننزل درجة فقط إذا لم نجد ثلاثة مرشّحين.
+// هكذا لا نُرجع null أبداً، ولا نقبل خياراً فاضحاً ما دام هناك أفضل منه.
+const SHAPE_FILTERS = [
+  (c, k) => c.digit === k.digit && c.latin === k.latin &&
+            c.len >= k.len * 0.5 && c.len <= k.len * 2 &&
+            Math.abs(c.words - k.words) <= 3,
+  (c, k) => c.digit === k.digit && c.latin === k.latin &&
+            c.len >= k.len * 0.35 && c.len <= k.len * 3,
+  (c, k) => c.digit === k.digit && c.latin === k.latin,
+  () => true
+];
+
 // اختيار مشتّتات مقاربة في الطول للإجابة الصحيحة — الخيار القصير جداً وسط
 // خيارات طويلة يكشف نفسه
 function buildChoices(item, categoryName, diffKey, seed) {
   const correct = String(item?.answer || '').trim();
   if (!correct) return null;
 
+  const rand = makeSeededRandom(seed);
+
+  // 1) مجموعة من نفس النوع — أفضل جودة
+  const typed = findAnswerPool(correct);
+  if (typed) {
+    const c = normalizeAnswer(correct);
+    const others = typed.filter(x => {
+      const n = normalizeAnswer(x);
+      return n !== c && !c.includes(n) && !n.includes(c);
+    });
+
+    if (others.length >= 3) {
+      const picked = [];
+      const avail = others.slice();
+      while (picked.length < 3 && avail.length) {
+        picked.push(avail.splice(Math.floor(rand() * avail.length), 1)[0]);
+      }
+      return shuffleChoices(correct, picked, rand);
+    }
+  }
+
+  // 2) إجابة رقمية — مشتّتات رقمية
+  const nums = numericDistractors(correct, rand);
+  if (nums) return shuffleChoices(correct, nums, rand);
+
+  // 3) الملاذ الأخير: إجابات أخرى من نفس الفئة.
+  // الترتيب: تشابه السؤال أولاً ثم قرب الطول — الاعتماد على الطول وحده
+  // كان يُنتج خيارات بلا صلة («تمر» أمام سؤال عن قارة).
   const pool = collectAnswerPool(categoryName, diffKey, correct);
   if (pool.length < 3) return null;
 
-  const rand = makeSeededRandom(seed);
+  const myWords = contentWords(item?.question || '');
+  const myShape = answerShape(correct);
+  const myLead = leadWord(correct);
 
-  // نرتّب حسب قرب الطول ثم نأخذ عشوائياً من الأقرب نصفهم
-  const byCloseness = pool
-    .map(a => ({ a, d: Math.abs(a.length - correct.length) }))
-    .sort((x, y) => x.d - y.d);
+  const scored = pool.map(c => ({
+    answer: c.answer,
+    shape: answerShape(c.answer),
+    sameLead: !!myLead && leadWord(c.answer) === myLead,
+    overlap: questionOverlap(myWords, c.question),
+    lenDiff: Math.abs(c.answer.length - correct.length)
+  }));
 
-  const candidates = byCloseness.slice(0, Math.max(3, Math.min(20, byCloseness.length)));
+  // أول مرشّح يترك ثلاثة على الأقل هو المعتمد
+  let kept = [];
+  for (const pass of SHAPE_FILTERS) {
+    kept = scored.filter(c => pass(c.shape, myShape));
+    if (kept.length >= 3) break;
+  }
+  if (kept.length < 3) kept = scored;
+
+  kept.sort((x, y) =>
+    (Number(y.sameLead) - Number(x.sameLead)) ||
+    (y.overlap - x.overlap) ||
+    (x.lenDiff - y.lenDiff));
+
+  // نأخذ من أفضل المرشّحين فقط، ونعشوِ داخلهم حتى لا تتكرر نفس الخيارات
+  const topN = Math.max(3, Math.min(12, kept.length));
+  const candidates = kept.slice(0, topN);
+
   const picked = [];
   while (picked.length < 3 && candidates.length) {
     const i = Math.floor(rand() * candidates.length);
-    picked.push(candidates.splice(i, 1)[0].a);
+    picked.push(candidates.splice(i, 1)[0].answer);
   }
   if (picked.length < 3) return null;
 
-  const choices = [correct, ...picked];
+  return shuffleChoices(correct, picked, rand);
+}
 
-  // خلط ثابت بنفس البذرة حتى يرى كل اللاعبين نفس الترتيب
+// خلط ثابت بنفس البذرة حتى يرى كل اللاعبين نفس الترتيب
+function shuffleChoices(correct, distractors, rand) {
+  const choices = [correct, ...distractors];
   for (let i = choices.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
     [choices[i], choices[j]] = [choices[j], choices[i]];
   }
-
   return { choices, correctIndex: choices.indexOf(correct) };
 }
 
