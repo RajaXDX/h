@@ -369,14 +369,76 @@ async function fetchAndApplyGameState() {
 
 /* ============================= ROOM LEAVING ============================= */
 
+/*
+  المضيف يغادر → تنتقل الاستضافة لأقدم لاعب باقٍ.
+
+  بدونها تصير الروم بلا مضيف: لا أحد يوزّع الفرق، ولا يبدأ جولة جديدة،
+  ولا يتحكّم — والباقون عالقون في لوحة لا تتقدّم.
+
+  ⚠️ النقل يتم **قبل** أن يعلن المضيف خروجه، فهو ما زال صاحب صلاحية.
+  و«أقدم لاعب» يُحسم بـ `joined_at` — ترتيب `getRoomPlayers` نفسه —
+  حتى يتفق كل جهاز على المرشّح ذاته بلا تسابق.
+*/
+async function transferHostTo(nextPlayerId) {
+  if (!currentRoom || !nextPlayerId) return false;
+
+  try {
+    const { error } = await supa
+      .from('room_players')
+      .update({ is_host: true })
+      .eq('room_id', currentRoom.id)
+      .eq('player_id', nextPlayerId);
+
+    if (error) throw error;
+
+    // نُحدّث الروم أيضاً: `host_player_id` هو ما يُقرأ عند استعادة الجلسة
+    await supa
+      .from('game_rooms')
+      .update({ host_player_id: nextPlayerId })
+      .eq('id', currentRoom.id);
+
+    log('👑 نُقلت الاستضافة للاعب التالي', 'success');
+    return true;
+  } catch (error) {
+    console.error('Transfer host error:', error);
+    return false;
+  }
+}
+
+async function passHostBeforeLeaving() {
+  if (!currentPlayer?.is_host) return;
+
+  try {
+    const { data, error } = await supa
+      .from('room_players')
+      .select('player_id')
+      .eq('room_id', currentRoom.id)
+      .eq('status', 'active')
+      .neq('player_id', currentPlayer.player_id)
+      .order('joined_at', { ascending: true })
+      .limit(1);
+
+    if (error) throw error;
+    const next = data?.[0]?.player_id;
+    if (!next) return;      // آخر من في الروم — لا أحد يستلم
+
+    await transferHostTo(next);
+  } catch (error) {
+    console.error('Pass host error:', error);
+  }
+}
+
 async function leaveRoom() {
   if (!currentRoom || !currentPlayer) return;
 
   try {
+    // قبل الخروج: نسلّم الاستضافة إن كنّا المضيف
+    await passHostBeforeLeaving();
+
     // تحديث حالة اللاعب
     await supa
       .from('room_players')
-      .update({ status: 'left', left_at: new Date().toISOString() })
+      .update({ status: 'left', left_at: new Date().toISOString(), is_host: false })
       .eq('room_id', currentRoom.id)
       .eq('player_id', currentPlayer.player_id);
 
@@ -621,6 +683,8 @@ function subscribeToRoom(roomId) {
             return;
           }
 
+          await syncMyHostStatus();
+
           updatePlayersList();
           log('🔄 تحديث قائمة اللاعبين', 'info');
         }
@@ -631,6 +695,45 @@ function subscribeToRoom(roomId) {
   } catch (error) {
     console.error('Subscribe to room error:', error);
   }
+}
+
+/*
+  `currentPlayer` كائن محلي منفصل عن صفّ اللاعب في قاعدة البيانات، فترقيته
+  هناك لا تصل إليه وحدها. بدون هذه المزامنة يبقى المضيف الجديد محروماً من
+  كل شيء: `isOnlineHost()` تكذّبه، وقيود المشاهد مطبّقة عليه، وزر البدء مخفي.
+*/
+async function syncMyHostStatus() {
+  if (!currentPlayer) return;
+
+  const mine = roomPlayers.find(p => p.player_id === currentPlayer.player_id);
+  if (!mine) return;
+
+  // شبكة أمان: لو غادر المضيف بلا تسليم (انقطع أو فشل التحديث) يستلمها
+  // أقدم لاعب باقٍ. المرشّح محسوم بالترتيب فلا يطالب بها اثنان معاً.
+  if (!mine.is_host && !roomPlayers.some(p => p.is_host)) {
+    if (roomPlayers[0]?.player_id === currentPlayer.player_id) {
+      if (await transferHostTo(currentPlayer.player_id)) {
+        currentPlayer.is_host = true;
+        announceHostPromotion();
+      }
+      return;
+    }
+  }
+
+  if (mine.is_host && !currentPlayer.is_host) {
+    currentPlayer.is_host = true;
+    announceHostPromotion();
+  } else if (!mine.is_host && currentPlayer.is_host) {
+    currentPlayer.is_host = false;
+  }
+}
+
+function announceHostPromotion() {
+  uiAlert('👑 صرت صاحب الروم — تقدر توزّع الفرق وتتحكّم باللعبة');
+  // لا حاجة لحفظ الجلسة: `restoreRoomSession` تستعيد المقعد من قاعدة
+  // البيانات بـ `device_id`، فصفة المضيف تأتي من هناك محدَّثة.
+  applyViewerRestrictions?.();  // ترفع قيود المشاهد عنه فوراً
+  updateStartGateUI?.();
 }
 
 function unsubscribeFromRoom() {
