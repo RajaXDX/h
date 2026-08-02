@@ -1393,14 +1393,67 @@ async function quickAddAndShow(ci, row) {
   renderQuestionBody(newItem);
 }
 
+/*
+  ذاكرة الأسئلة المعروضة.
+
+  كان `pickFromBank` اختياراً عشوائياً محضاً بلا ذاكرة، فالسؤال نفسه يعود في
+  الجولة التالية. مع 20 سؤالاً لكل خانة و18 خانة في الجولة: الجولة الثانية
+  فيها ~1 سؤال مكرّر والخامسة ~3-4. لعائلة تلعب كل ليلة هذا محسوس.
+
+  نحفظ نصوص ما عُرض لكل (فئة/مستوى) ونتجنّبها. وحين تُستهلك الفئة كاملة
+  نُصفّرها ونبدأ دورة جديدة — فلا ننفد من الأسئلة أبداً.
+*/
+const SEEN_KEY = 'mr_seen_questions';
+const SEEN_MAX_CELLS = 400;   // سقف يمنع تضخّم التخزين مع مرور الشهور
+
+function loadSeen() {
+  const raw = loadJSON(SEEN_KEY, {});
+  return (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
+}
+
+function markQuestionSeen(categoryName, diffKey, text) {
+  if (!text) return;
+  const seen = loadSeen();
+  const key = `${categoryName}|${diffKey}`;
+  const list = Array.isArray(seen[key]) ? seen[key] : [];
+
+  if (!list.includes(text)) list.push(text);
+  seen[key] = list;
+
+  // نُسقط أقدم الخانات إن تجاوزنا السقف — الأحدث أولى بالبقاء
+  const keys = Object.keys(seen);
+  if (keys.length > SEEN_MAX_CELLS) {
+    keys.slice(0, keys.length - SEEN_MAX_CELLS).forEach(k => delete seen[k]);
+  }
+
+  saveJSON(SEEN_KEY, seen);
+}
+
+function resetSeenQuestions() {
+  saveJSON(SEEN_KEY, {});
+}
+
 function pickFromBank(categoryName, row) {
   const diffKey = DIFFKEY[row];
   const list = QBANK[categoryName] && QBANK[categoryName][diffKey];
 
   if (!list || !list.length) return null;
 
-  const idx = Math.floor(Math.random() * list.length);
-  return { ...list[idx] };
+  const seen = loadSeen();
+  const key = `${categoryName}|${diffKey}`;
+  const already = new Set(Array.isArray(seen[key]) ? seen[key] : []);
+
+  // ما لم يُعرض بعد. إن استُهلكت الفئة كلها بدأنا دورة جديدة نظيفة
+  let fresh = list.filter(q => !already.has(String(q?.question || '').trim()));
+  if (!fresh.length) {
+    delete seen[key];
+    saveJSON(SEEN_KEY, seen);
+    fresh = list;
+  }
+
+  const chosen = fresh[Math.floor(Math.random() * fresh.length)];
+  markQuestionSeen(categoryName, diffKey, String(chosen?.question || '').trim());
+  return { ...chosen };
 }
 
 // صورة السؤال إن وُجدت، وإلا الإيموجي. فئات مثل «شعارات» و«منو المشهور»
