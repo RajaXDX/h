@@ -70,7 +70,7 @@ supabase-invites.sql        جدول room_invites + invite_friend + my_invites
 | `supabase-friends.sql` | `friendships` + `request_friend` | ✅ مُشغَّل |
 | `supabase-privacy.sql` | `privacy` + دوال البطاقة والصدارة | ✅ مُشغَّل |
 | `supabase-invites.sql` | `room_invites` + دعوة الأصدقاء | ✅ مُشغَّل |
-| `supabase-presence.sql` | `last_seen_at` لنبضة الحضور | ⏳ **بانتظار التشغيل** |
+| `supabase-presence.sql` | `last_seen_at` لنبضة الحضور | ✅ مُشغَّل (2026-08-03) |
 
 **لا يوجد سكربت معلّق.** أي سكربت جديد يُكتب مستقبلاً: شغّله على دفعات
 (راجع الملاحظة 11 أدناه).
@@ -520,8 +520,10 @@ supabase-invites.sql        جدول room_invites + invite_friend + my_invites
   قبل تشغيل السكربت؛ والمضيف العائد ينزل بهدوء ولا يستردّها؛ والمؤقتات
   تبدأ وتتوقف بلا تسريب؛ ولا نبضة والصفحة في الخلفية.
 
-  📌 **يتطلّب تشغيل `supabase-presence.sql`** — بدونه كل شيء يبتلع خطأه
-  واللعبة تعمل بلا نبضة كما كانت.
+  ✅ **`supabase-presence.sql` شُغِّل (2026-08-03).** تم التحقق من قاعدة
+  البيانات: العمود موجود، والصفوف القائمة اتعبّت بختم زمني لا `NULL`.
+  وظهر أثر جانبي مفيد: خمسة لاعبين كانوا `active` منذ رومات مهجورة صاروا
+  يُعدّون غائبين بدل أن يحتجزوا رومهم إلى الأبد.
 
 ---
 
