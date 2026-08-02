@@ -171,6 +171,10 @@ function goToCategories() {
 /* ============================= CATEGORY SELECTION ============================= */
 
 function renderCatGrid() {
+  // المؤقّت يُرسم هنا لا في `goToCategories`: للأخيرة مدخلان (محلي وأونلاين)
+  // وكلاهما يمرّ بهذه الدالة، فلا يُنسى أحدهما
+  renderTimerPicker();
+
   const grid = document.getElementById('catGrid');
   if (!grid) return;
 
@@ -643,6 +647,107 @@ function startFriendCall() {
 
   setTimeout(tick, 0);
   friendCallTimer = setInterval(tick, 1000);
+}
+
+/* ============================= QUESTION TIMER ============================= */
+
+/*
+  مؤقّت السؤال. كان الوحيد في اللعبة هو مؤقّت «اتصال بصديق»، والسؤال العادي
+  يبقى مفتوحاً بلا حدّ — فريق يفكّر خمس دقائق والبقية ينتظرون.
+
+  ⚠️ نبثّ **لحظة الانتهاء** (طابع زمني) لا الثواني المتبقية: لو بثثنا عدّاداً
+  لاختلف بين الأجهزة بمقدار تأخّر الشبكة، ولرأى كل لاعب رقماً مختلفاً.
+  الطابع الزمني يجعل الجميع يحسبون من نقطة واحدة.
+*/
+const TIMER_CHOICES = [0, 20, 30, 45];   // 0 = مطفأ
+let questionSeconds = loadJSON('mr_qtimer', 0);
+let questionDeadline = 0;
+let questionTimerId = null;
+
+function setQuestionSeconds(sec) {
+  questionSeconds = Number(sec) || 0;
+  saveJSON('mr_qtimer', questionSeconds);
+  Sound.click();
+  renderTimerPicker();
+}
+
+function renderTimerPicker() {
+  const wrap = document.getElementById('timerPicker');
+  if (!wrap) return;
+
+  wrap.innerHTML = '';
+  TIMER_CHOICES.forEach(sec => {
+    const b = createElement('button', {
+      class: `timer-opt${sec === questionSeconds ? ' active' : ''}`
+    }, sec === 0 ? 'بدون مؤقّت' : `${sec} ثانية`);
+    b.onclick = () => setQuestionSeconds(sec);
+    wrap.appendChild(b);
+  });
+}
+
+function startQuestionTimer() {
+  stopQuestionTimer();
+
+  const box = document.getElementById('qtimer');
+  if (box) { box.textContent = ''; box.classList.remove('urgent'); }
+
+  // بلا مهلة: نترك الخانة فارغة — وإلا بقي عدّاد السؤال السابق معروضاً
+  if (!questionDeadline) return;
+
+  const tick = () => {
+    const el = document.getElementById('qtimer');
+    if (!el) return;
+
+    const left = Math.max(0, Math.ceil((questionDeadline - Date.now()) / 1000));
+    el.textContent = `⏱️ ${left}`;
+    el.classList.toggle('urgent', left <= 5 && left > 0);
+
+    if (left > 0) return;
+
+    stopQuestionTimer();
+    el.textContent = '⏰ انتهى الوقت';
+
+    // من يحسم انتهاء الوقت: صاحب الدور أو المضيف. الاستدعاء المزدوج غير ضارّ
+    // لأن الدوال أدناه تخرج فوراً إذا أُغلق السؤال أو سُجّلت إجابة.
+    if (isOnlineGame() && !canControlGame()) return;
+    Sound.skip();
+    onQuestionTimeout();
+  };
+
+  tick();
+  questionTimerId = setInterval(tick, 250);   // ربع ثانية: العدّ لا يتلعثم
+}
+
+function stopQuestionTimer() {
+  if (questionTimerId) { clearInterval(questionTimerId); questionTimerId = null; }
+}
+
+function onQuestionTimeout() {
+  if (!current) return;
+
+  const key = `${activeRound}-${current.ci}-${current.row}`;
+  const item = questionCache[key];
+
+  // أونلاين بخيارات: تُحتسب إجابة خاطئة بلا نقاط، ويُعرض الصحيح ثم ينتقل الدور
+  if (isOnlineGame() && Array.isArray(item?.choices)) {
+    if (lastAnswer) return;
+    const turn = currentTurnPlayer();
+    lastAnswer = {
+      pickedIndex: -1,
+      correctIndex: item.correctIndex,
+      byName: turn?.name || getTeamName(activeTeam),
+      team: turn?.team || activeTeam,
+      correct: false,
+      timedOut: true
+    };
+    renderChoices(item);
+    publishGameState();
+    setTimeout(() => finishAnsweredQuestion(), 2600);
+    return;
+  }
+
+  // محلي: بلا نقاط والدور ينتقل — وهذا معنى المؤقّت
+  award(null);
 }
 
 function clearActiveLifeline() {
@@ -1233,7 +1338,11 @@ function openQuestion(ci, row) {
     }
   }
 
+  // المهلة تُحسب مرة عند الفتح ثم تُبثّ، فيعدّ الجميع من نفس النقطة
+  questionDeadline = questionSeconds > 0 ? Date.now() + questionSeconds * 1000 : 0;
+
   renderQuestionBody(item);
+  startQuestionTimer();
   if (canControlGame() && isOnlineGame()) publishGameState();
   if (isOnlineHost()) publishGameState();
 }
@@ -1430,6 +1539,8 @@ function closeQuestion() {
   document.getElementById('cornersBar').style.display = '';
   current = null;
   lastAnswer = null;
+  stopQuestionTimer();
+  questionDeadline = 0;
   clearActiveLifeline();
   if (canControlGame()) publishGameState();
 }
@@ -1479,6 +1590,7 @@ function publishGameState(extra = {}) {
       ? { ci: current.ci, row: current.row, round: activeRound, item: questionCache[`${activeRound}-${current.ci}-${current.row}`] }
       : null,
     lastAnswer,
+    questionDeadline,      // طابع زمني لا عدّاد — راجع `startQuestionTimer`
     ...extra
   };
 
@@ -1552,10 +1664,15 @@ function applyRemoteGameState(state) {
       document.getElementById('qpoints').textContent = `${POINTS[q.row]} نقطة`;
       renderQuestionBody(q.item);
       overlay.classList.add('show');
+      // نأخذ المهلة كما بُثّت فيعدّ الجميع إلى نفس اللحظة
+      questionDeadline = Number(state.questionDeadline) || 0;
+      startQuestionTimer();
     }
   } else if (!isOnlineHost()) {
     overlay.classList.remove('show');
     current = null;
+    stopQuestionTimer();
+    questionDeadline = 0;
   }
 
   applyViewerRestrictions();
@@ -2043,7 +2160,9 @@ function renderChoices(item) {
     ${done ? `<div class="answer-result ${lastAnswer.correct ? 'ok' : 'no'}">
         ${lastAnswer.correct
           ? `✅ إجابة صحيحة — ${escapeHtml(lastAnswer.byName)} كسب ${POINTS[current.row]} نقطة`
-          : `❌ إجابة خاطئة من ${escapeHtml(lastAnswer.byName)} — الصحيحة: ${escapeHtml(item.choices[item.correctIndex])}`}
+          : lastAnswer.timedOut
+            ? `⏰ انتهى الوقت على ${escapeHtml(lastAnswer.byName)} — الصحيحة: ${escapeHtml(item.choices[item.correctIndex])}`
+            : `❌ إجابة خاطئة من ${escapeHtml(lastAnswer.byName)} — الصحيحة: ${escapeHtml(item.choices[item.correctIndex])}`}
       </div>` : ''}
   `;
 

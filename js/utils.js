@@ -146,6 +146,9 @@ function goToSetup() {
   renderTeamSetup();
 }
 
+// ⚠️ هذه النسخة **ميتة**: `js/game.js` يعرّف `goToCategories` أيضاً ويُحمَّل
+// بعد هذا الملف فيَجُبّها. لا تعدّل هنا ظنّاً أنك تعدّل السلوك — عدّل في
+// game.js. (تُركت لأن حذفها يكسر التشغيل لو تغيّر ترتيب الوسوم يوماً.)
 function goToCategories() {
   Sound.click();
   showScreen('screen-categories');

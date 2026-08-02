@@ -666,6 +666,73 @@ header {
   border-color: var(--gold);
 }
 
+/* ---- مؤقّت السؤال ---- */
+
+.timer-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 4px auto 14px;
+}
+
+.timer-label {
+  font-family: 'Tajawal';
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.timer-picker {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.timer-opt {
+  font-family: 'Tajawal';
+  font-size: 13px;
+  min-height: 40px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  background: none;
+  color: var(--muted);
+  border: 1px solid rgba(239, 227, 198, 0.3);
+  transition: all 0.2s;
+}
+
+.timer-opt:hover { color: var(--sand); border-color: var(--gold); }
+
+.timer-opt.active {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #12261C;
+  font-weight: 700;
+}
+
+/* العدّاد داخل نافذة السؤال */
+.qtimer {
+  font-family: 'Cairo';
+  font-weight: 800;
+  font-size: 17px;
+  color: var(--sand);
+  min-width: 58px;
+  text-align: center;
+}
+
+/* آخر خمس ثوانٍ: ينبض بالأحمر */
+.qtimer.urgent {
+  color: var(--clay);
+  animation: qtimer-pulse 1s ease-in-out infinite;
+}
+
+@keyframes qtimer-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.18); }
+}
+
 /* زرّان جنب بعض تحت لوحة النتائج: الرجوع للرئيسية ولعبة جديدة */
 .game-actions {
   display: flex;
