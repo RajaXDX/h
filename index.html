@@ -30,8 +30,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800;900&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
   <!-- ?v= رقم الإصدار: غيّره عند أي تعديل حتى تصل النسخة الجديدة للمتصفحات بدون Ctrl+Shift+R -->
-  <link rel="stylesheet" href="css/style.css?v=20260802a">
-  <link rel="stylesheet" href="css/responsive.css?v=20260802a">
+  <link rel="stylesheet" href="css/style.css?v=20260802f">
+  <link rel="stylesheet" href="css/responsive.css?v=20260802f">
 </head>
 <body>
 
@@ -394,13 +394,21 @@
         <input type="text" id="newQText" placeholder="نص السؤال">
         <input type="text" id="newQAnswer" placeholder="الإجابة الصحيحة">
         <input type="text" id="newQEmoji" placeholder="إيموجي (اختياري)">
+        <label class="admin-file-label" for="newQImage">🖼️ صورة السؤال (اختياري)</label>
+        <input type="file" id="newQImage" accept="image/*" class="admin-file" onchange="previewNewQuestionImage()">
+        <div id="newQImagePreview" class="q-img-preview"></div>
         <button class="btn btn-answer" onclick="addBankQuestion()">+ إضافة سؤال</button>
       </div>
       <div class="admin-row" style="flex-direction:column; align-items:stretch; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 20px;">
-        <h4 style="margin: 0 0 12px 0;">📸 استيراد صور</h4>
-        <input type="file" id="imageImportInput" accept="image/*" multiple style="padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); color: #fff; border: 1px solid rgba(255,255,255,0.2);">
+        <h4 style="margin: 0 0 12px 0;">📸 مكتبة الصور</h4>
+        <div class="admin-hint">
+          استورد صوراً هنا ثم ألصقها بأي سؤال من زر 🖼️ في القائمة تحت.
+          الصور تُصغَّر تلقائياً إلى 640px حتى لا يمتلئ تخزين المتصفح.
+        </div>
+        <input type="file" id="imageImportInput" accept="image/*" multiple class="admin-file">
         <button class="btn btn-answer" onclick="importImages()">📁 استيراد الصور من الجهاز</button>
         <div id="imageImportStatus" style="font-size: 12px; margin-top: 8px; color: #FFD700;"></div>
+        <div id="imageLibraryGrid" class="img-library"></div>
       </div>
       <div class="bank-list" id="bankList"></div>
       <div class="bank-count" id="bankCount"></div>
@@ -503,16 +511,16 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <!-- ملفات JS الرئيسية -->
-<script src="js/supabase-config.js?v=20260802a"></script>
-<script src="js/utils.js?v=20260802a"></script>
-<script src="js/auth.js?v=20260802a"></script>
-<script src="js/friends.js?v=20260802a"></script>
-<script src="js/profile.js?v=20260802a"></script>
-<script src="js/game.js?v=20260802a"></script>
-<script src="js/admin.js?v=20260802a"></script>
-<script src="js/sync.js?v=20260802a"></script>
-<script src="js/rooms.js?v=20260802a"></script>
-<script src="js/chat.js?v=20260802a"></script>
+<script src="js/supabase-config.js?v=20260802f"></script>
+<script src="js/utils.js?v=20260802f"></script>
+<script src="js/auth.js?v=20260802f"></script>
+<script src="js/friends.js?v=20260802f"></script>
+<script src="js/profile.js?v=20260802f"></script>
+<script src="js/game.js?v=20260802f"></script>
+<script src="js/admin.js?v=20260802f"></script>
+<script src="js/sync.js?v=20260802f"></script>
+<script src="js/rooms.js?v=20260802f"></script>
+<script src="js/chat.js?v=20260802f"></script>
 
 </body>
 </html>

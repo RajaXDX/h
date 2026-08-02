@@ -122,6 +122,7 @@ function initializeAdminPanel() {
   renderAdminCategories();
   populateBankCatSelect();
   renderBankList();
+  renderImageLibrary();
   updateSyncInfo();
 }
 
@@ -299,6 +300,102 @@ function populateBankCatSelect() {
   renderBankList();
 }
 
+/* ---- صور الأسئلة ---- */
+
+// الصورة المختارة لسؤال جديد لم يُضف بعد
+let pendingQuestionImage = null;
+
+// حدّ آمن دون سقف localStorage (~5MB): نرفض قبل الامتلاء لا بعده.
+// الامتلاء بلا حارس يعني فشل الحفظ صامتاً وضياع البنك كلّه.
+const BANK_SIZE_LIMIT = 4 * 1024 * 1024;
+
+function bankSizeBytes() {
+  try { return new Blob([JSON.stringify(QBANK)]).size; } catch (e) { return 0; }
+}
+
+// نحفظ ونتحقق: لو تجاوزنا الحدّ نُبلغ بوضوح بدل أن يفشل الحفظ بصمت
+function saveBankWithImages() {
+  const size = bankSizeBytes();
+  if (size > BANK_SIZE_LIMIT) {
+    uiAlert(`❌ حجم البنك ${formatBytes(size)} — تجاوز الحدّ الآمن.\n` +
+            `احذف بعض الصور أو استخدم صوراً أصغر.`);
+    return false;
+  }
+  if (!saveJSON('mr_bank', QBANK)) {
+    uiAlert('❌ تعذّر الحفظ — تخزين المتصفح ممتلئ. احذف بعض الصور.');
+    return false;
+  }
+  return true;
+}
+
+async function previewNewQuestionImage() {
+  const input = document.getElementById('newQImage');
+  const box = document.getElementById('newQImagePreview');
+  const file = input?.files?.[0];
+  if (!file) { clearNewQuestionImage(); return; }
+
+  try {
+    pendingQuestionImage = await downscaleImageFile(file);
+    if (box) {
+      box.innerHTML =
+        `<img src="${pendingQuestionImage}" alt="معاينة">
+         <span>${formatBytes(dataUrlBytes(pendingQuestionImage))}</span>
+         <button type="button" class="del-q" onclick="clearNewQuestionImage()">✕</button>`;
+    }
+  } catch (e) {
+    uiAlert(`❌ ${e.message}`);
+    clearNewQuestionImage();
+  }
+}
+
+function clearNewQuestionImage() {
+  pendingQuestionImage = null;
+  const input = document.getElementById('newQImage');
+  const box = document.getElementById('newQImagePreview');
+  if (input) input.value = '';
+  if (box) box.innerHTML = '';
+}
+
+// إلصاق صورة بسؤال موجود — هذا ما يجعل فئات الشعارات والمشاهير قابلة للعب
+async function attachImageToQuestion(cat, diffKey, idx) {
+  if (!isAdminLoggedIn) { uiAlert('❌ يجب تسجيل الدخول كإدمن أولاً'); return; }
+  const item = QBANK[cat]?.[diffKey]?.[idx];
+  if (!item) return;
+
+  const picker = document.createElement('input');
+  picker.type = 'file';
+  picker.accept = 'image/*';
+  picker.onchange = async () => {
+    const file = picker.files?.[0];
+    if (!file) return;
+    try {
+      const previous = item.image;
+      item.image = await downscaleImageFile(file);
+      if (!saveBankWithImages()) {
+        if (previous) item.image = previous; else delete item.image;
+        return;
+      }
+      pushToCloud();
+      renderBankList();
+      log(`🖼️ أُلصقت صورة بسؤال في ${cat}`, 'success');
+      uiAlert('✅ تم إلصاق الصورة بالسؤال');
+    } catch (e) {
+      uiAlert(`❌ ${e.message}`);
+    }
+  };
+  picker.click();
+}
+
+async function removeQuestionImage(cat, diffKey, idx) {
+  const item = QBANK[cat]?.[diffKey]?.[idx];
+  if (!item?.image) return;
+  if (!await uiConfirm('حذف صورة هذا السؤال؟')) return;
+  delete item.image;
+  saveBankWithImages();
+  pushToCloud();
+  renderBankList();
+}
+
 function addBankQuestion() {
   // ✅ حماية أمنية: فقط الإدمن يمكنه إضافة أسئلة
   if (!isAdminLoggedIn) {
@@ -321,20 +418,27 @@ function addBankQuestion() {
     QBANK[cat] = { easy: [], medium: [], hard: [] };
   }
 
-  QBANK[cat][diffKey].push({
+  const entry = {
     question: q,
     answer: a,
     emoji: emoji,
     needsImage: false,
     imageQuery: ''
-  });
+  };
+  if (pendingQuestionImage) entry.image = pendingQuestionImage;
 
-  saveJSON('mr_bank', QBANK);
+  QBANK[cat][diffKey].push(entry);
+
+  if (!saveBankWithImages()) {
+    QBANK[cat][diffKey].pop();
+    return;
+  }
   pushToCloud();
 
   document.getElementById('newQText').value = '';
   document.getElementById('newQAnswer').value = '';
   document.getElementById('newQEmoji').value = '';
+  clearNewQuestionImage();
 
   log(`✅ تمت إضافة سؤال جديد في فئة ${cat}`, 'success');
   Sound.award();
@@ -365,12 +469,32 @@ function renderBankList() {
 
   wrap.innerHTML = '';
   list.forEach((item, idx) => {
+    const thumb = item.image
+      ? `<img class="bank-thumb" src="${escapeHtml(item.image)}" alt="">`
+      : `<span class="bank-emoji">${escapeHtml(item.emoji || '❓')}</span>`;
+
     const row = createElement('div', { class: 'bank-item' }, `
-      <div>
-        <div class="bq">${item.emoji || '❓'} ${item.question}</div>
-        <div class="ba">الإجابة: ${item.answer}</div>
+      <div class="bank-main">
+        ${thumb}
+        <div>
+          <div class="bq">${escapeHtml(item.question)}</div>
+          <div class="ba">الإجابة: ${escapeHtml(item.answer)}</div>
+        </div>
       </div>
     `);
+
+    const imgBtn = createElement('button', {
+      class: 'img-q',
+      title: item.image ? 'استبدال الصورة' : 'إلصاق صورة'
+    }, '🖼️');
+    imgBtn.onclick = () => attachImageToQuestion(cat, diffKey, idx);
+    row.appendChild(imgBtn);
+
+    if (item.image) {
+      const rmImg = createElement('button', { class: 'img-q', title: 'حذف الصورة' }, '🚫');
+      rmImg.onclick = () => removeQuestionImage(cat, diffKey, idx);
+      row.appendChild(rmImg);
+    }
 
     const delBtn = createElement('button', { class: 'del-q', title: 'حذف' }, '✕');
     delBtn.onclick = () => deleteBankQuestion(cat, diffKey, idx);
@@ -478,93 +602,100 @@ function syncNow() {
 
 /* ============================= IMAGE IMPORT ============================= */
 
-function importImages() {
+/*
+  ⚠️ كانت هذه الدالة تحفظ الصور بحجمها الأصلي في `mr_images` **ولا شيء
+  يقرأها إطلاقاً** — لا الأسئلة ولا العرض. فالمستخدم يستورد صوره ثم لا
+  يجدها في أي سؤال. الآن: تُصغَّر، وتُعرض في شبكة، ومنها تُلصق بالأسئلة.
+*/
+async function importImages() {
   if (!isAdminLoggedIn) {
     uiAlert('❌ يجب تسجيل الدخول كإدمن أولاً');
     return;
   }
 
   const fileInput = document.getElementById('imageImportInput');
-  const files = fileInput.files;
+  const files = Array.from(fileInput.files || []).filter(f => f.type.startsWith('image/'));
 
-  if (files.length === 0) {
+  if (!files.length) {
     uiAlert('❌ اختر صوراً من الجهاز أولاً');
     return;
   }
 
   const statusDiv = document.getElementById('imageImportStatus');
-  statusDiv.textContent = '⏳ جاري معالجة الصور...';
-
+  const images = loadJSON('mr_images', {});
   let processed = 0;
-  let images = loadJSON('mr_images', {});
+  let failed = 0;
 
-  Array.from(files).forEach((file, idx) => {
-    if (!file.type.startsWith('image/')) {
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const base64 = e.target.result;
-      const fileName = file.name;
-      const timestamp = Date.now();
-      const imageKey = `img_${timestamp}_${idx}`;
-
-      images[imageKey] = {
-        name: fileName,
-        data: base64,
-        size: file.size,
-        type: file.type,
+  for (const file of files) {
+    statusDiv.textContent = `⏳ جاري معالجة ${processed + failed + 1}/${files.length}...`;
+    try {
+      const data = await downscaleImageFile(file);
+      images[`img_${Date.now()}_${processed}`] = {
+        name: file.name,
+        data,
+        size: dataUrlBytes(data),
+        originalSize: file.size,
+        type: 'image/jpeg',
         uploadDate: new Date().toISOString()
       };
-
       processed++;
-      statusDiv.textContent = `⏳ تم معالجة ${processed}/${files.length} صورة...`;
+    } catch (e) {
+      console.warn('تعذّرت معالجة صورة:', file.name, e);
+      failed++;
+    }
+  }
 
-      if (processed === files.length) {
-        saveJSON('mr_images', images);
-        pushToCloud();
-        statusDiv.textContent = `✅ تم استيراد ${processed} صورة بنجاح!`;
-        fileInput.value = '';
-        Sound.award();
-        log(`✅ تم استيراد ${processed} صورة`, 'success');
+  if (!saveJSON('mr_images', images)) {
+    statusDiv.textContent = '';
+    uiAlert('❌ تخزين المتصفح ممتلئ — احذف بعض الصور قبل الاستيراد');
+    return;
+  }
 
-        setTimeout(() => {
-          statusDiv.textContent = '';
-          showImageLibrary(images);
-        }, 1500);
-      }
-    };
-    reader.readAsDataURL(file);
-  });
+  statusDiv.textContent = `✅ استُوردت ${processed} صورة` + (failed ? ` (تعذّرت ${failed})` : '');
+  fileInput.value = '';
+  Sound.award();
+  log(`✅ استُوردت ${processed} صورة`, 'success');
+
+  renderImageLibrary();
+  setTimeout(() => { statusDiv.textContent = ''; }, 2500);
 }
 
-function showImageLibrary(images) {
-  const imageCount = Object.keys(images).length;
-  const msg = `
-📸 مكتبة الصور
-━━━━━━━━━━━━
-إجمالي الصور: ${imageCount}
+// شبكة الصور: كل صورة تُلصق بالسؤال المحدَّد في القائمة أو تُحذف
+function renderImageLibrary() {
+  const grid = document.getElementById('imageLibraryGrid');
+  if (!grid) return;
 
-الصور المحفوظة:
-${Object.entries(images).slice(-5).map(([key, img]) =>
-  `• ${img.name} (${formatBytes(img.size)})`
-).join('\n')}
+  const images = loadJSON('mr_images', {});
+  const keys = Object.keys(images);
 
-${imageCount > 5 ? `... و ${imageCount - 5} صور أخرى` : ''}
+  if (!keys.length) { grid.innerHTML = ''; return; }
 
-يمكنك الآن استخدام أسماء الصور في الأسئلة!
-  `;
-  uiAlert(msg);
+  const total = keys.reduce((s, k) => s + (images[k].size || 0), 0);
+
+  grid.innerHTML =
+    `<div class="admin-hint">${keys.length} صورة — ${formatBytes(total)}</div>` +
+    keys.map(k => `
+      <div class="img-cell">
+        <img src="${escapeHtml(images[k].data)}" alt="${escapeHtml(images[k].name || '')}">
+        <button class="del-q" title="حذف من المكتبة" onclick="deleteLibraryImage('${k}')">✕</button>
+      </div>
+    `).join('');
 }
 
-function formatBytes(bytes) {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+async function deleteLibraryImage(key) {
+  const images = loadJSON('mr_images', {});
+  if (!images[key]) return;
+  if (!await uiConfirm('حذف هذه الصورة من المكتبة؟')) return;
+  delete images[key];
+  saveJSON('mr_images', images);
+  renderImageLibrary();
 }
+
+// حُذفت showImageLibrary: كانت تعرض أسماء الصور وتَعِد بأنه «يمكنك الآن
+// استخدام أسماء الصور في الأسئلة» — وهو وعد لم يكن له أي كود يحقّقه.
+// بديلها renderImageLibrary أعلاه، والإلصاق الفعلي في attachImageToQuestion.
+
+// formatBytes مشتركة الآن في js/utils.js (بوحدات عربية)
 
 /* ============================= RELOAD QUESTION BANK ============================= */
 

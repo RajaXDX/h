@@ -61,6 +61,70 @@ function saveJSON(key, val) {
   }
 }
 
+/* ---- IMAGES ---- */
+
+/*
+  الصور تُخزَّن داخل بنك الأسئلة نفسه كـ data URL، ويُدفع البنك كاملاً إلى
+  Supabase وإلى localStorage. لذلك حجم الصورة ليس تفصيلاً:
+    • localStorage لا يتجاوز ~5MB لكل نطاق، والبنك النصّي وحده يقارب 1.5MB
+    • البنك يُدفع للسحابة عند كل تعديل
+  فنصغّر كل صورة قبل تخزينها: 640px بعد أطول ضلع بجودة 0.7 ≈ 30–60KB،
+  وهو أكثر من كافٍ لمربّع الصورة داخل نافذة السؤال.
+
+  الحل الأصح مستقبلاً: Supabase Storage ورابط بدل data URL.
+*/
+const IMAGE_MAX_DIM = 640;
+const IMAGE_QUALITY = 0.7;
+
+function downscaleImageFile(file, maxDim = IMAGE_MAX_DIM, quality = IMAGE_QUALITY) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type.startsWith('image/')) {
+      reject(new Error('الملف ليس صورة'));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('تعذّرت قراءة الملف'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('تعذّر فتح الصورة'));
+      img.onload = () => {
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+
+        // JPEG لا يدعم الشفافية فتصير المناطق الشفافة سوداء — نضع خلفية بيضاء
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// حجم نصّ data URL بالبايت تقريباً (base64 يزيد الحجم ~33%)
+function dataUrlBytes(dataUrl) {
+  const i = String(dataUrl || '').indexOf(',');
+  if (i < 0) return 0;
+  return Math.round((String(dataUrl).length - i - 1) * 0.75);
+}
+
+function formatBytes(bytes) {
+  const n = Number(bytes) || 0;
+  if (n < 1024) return `${n} بايت`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} كيلوبايت`;
+  return `${(n / (1024 * 1024)).toFixed(2)} ميجابايت`;
+}
+
 /* ---- SCREEN NAVIGATION ---- */
 function showScreen(screenId) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));

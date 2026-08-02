@@ -152,6 +152,7 @@ async function signOutPlayer() {
   unsubscribeFromInvites?.();
   try { await supa?.auth.signOut(); } catch (e) { console.warn(e); }
   currentProfile = null;
+  try { localStorage.removeItem(PROFILE_CACHE_KEY); } catch (e) { /* وضع خاص */ }
   isAdminLoggedIn = false;
   if (typeof leaveRoom === 'function' && currentRoom) await leaveRoom();
   renderAuthState();
@@ -160,24 +161,62 @@ async function signOutPlayer() {
 
 /* ---- الملف الشخصي ---- */
 
+// نسخة من آخر ملف شخصي وصل، لتجاوز أعطال الشبكة عند الفتح
+const PROFILE_CACHE_KEY = 'mr_profile_cache';
+
+function profileFromCache(userId) {
+  const cached = loadJSON(PROFILE_CACHE_KEY, null);
+  if (!cached || cached.id !== userId) return null;
+  return { ...cached, _stale: true };   // بيانات قديمة: تصلح للعرض لا للكتابة
+}
+
+/*
+  ⚠️ لماذا الجلسة أولاً ولماذا لا نُخرج اللاعب عند الفشل:
+
+  كانت الدالة تبدأ بـ `supa.auth.getUser()` — وهو نداء شبكة — ثم تشترط نجاح
+  قراءة صف `profiles`. أي تعثّر لحظة الفتح (جوال على شبكة ضعيفة، خطأ عابر)
+  كان يمسح `currentProfile`، و`isSignedIn()` تعتمد عليه، فتظهر بوابة الدخول
+  رغم أن الجلسة سليمة ومحفوظة في المتصفح. النتيجة عملياً: اللاعب يسجّل دخوله
+  كل مرة يفتح فيها اللعبة.
+
+  الآن: `getSession()` قراءة محلية بلا شبكة — هي وحدها الفيصل في «هل هو
+  داخل؟». وإن تعذّر جلب صفّه نُبقيه داخلاً بنسخة محفوظة موسومة `_stale`.
+*/
 async function loadProfile() {
   if (!supa) return null;
 
+  let session = null;
   try {
-    const { data: { user } } = await supa.auth.getUser();
-    if (!user) { currentProfile = null; return null; }
-
-    const { data, error } = await supa
-      .from('profiles').select('*').eq('id', user.id).single();
-
-    if (error) { currentProfile = null; return null; }
-
-    currentProfile = data;
-    return data;
+    const { data } = await supa.auth.getSession();
+    session = data?.session || null;
   } catch (e) {
-    currentProfile = null;
-    return null;
+    console.warn('تعذّرت قراءة الجلسة:', e);
   }
+
+  if (!session?.user) { currentProfile = null; return null; }
+
+  try {
+    const { data, error } = await supa
+      .from('profiles').select('*').eq('id', session.user.id).single();
+
+    if (!error && data) {
+      currentProfile = data;
+      saveJSON(PROFILE_CACHE_KEY, data);
+      return data;
+    }
+  } catch (e) {
+    console.warn('تعذّر جلب الملف الشخصي:', e);
+  }
+
+  // الجلسة قائمة والصف لم يصل — الخروج هنا عقوبة على عطل شبكة لا انتهاء صلاحية
+  currentProfile = profileFromCache(session.user.id) || {
+    id: session.user.id,
+    username: (session.user.email || '').split('@')[0] || 'لاعب',
+    games_played: 0, games_won: 0, total_score: 0,
+    privacy: 'public',
+    _stale: true
+  };
+  return currentProfile;
 }
 
 function isSignedIn() {
@@ -195,6 +234,16 @@ function getPlayerDisplayName() {
 // اللعبة فردية لكل جهاز فلا يوجد تسابق حقيقي على نفس الصف.
 async function recordGameResult({ won, score }) {
   if (!supa || !currentProfile) return;
+
+  // ⚠️ النسخة الموسومة `_stale` أرقامها ليست الأرقام الحقيقية. الكتابة
+  // اعتماداً عليها تمحو سجلّ اللاعب كلّه. نحاول جلب صفّه مرة، وإلا لا نكتب.
+  if (currentProfile._stale) {
+    await loadProfile();
+    if (!currentProfile || currentProfile._stale) {
+      console.warn('لم تُسجَّل نتيجة الجولة: الملف الشخصي لم يصل من قاعدة البيانات');
+      return;
+    }
+  }
 
   try {
     const next = {

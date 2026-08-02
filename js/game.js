@@ -1191,6 +1191,18 @@ function pickFromBank(categoryName, row) {
   return { ...list[idx] };
 }
 
+// صورة السؤال إن وُجدت، وإلا الإيموجي. فئات مثل «شعارات» و«منو المشهور»
+// و«ميمز» بلا صورة سؤالها بلا معنى.
+function questionVisual(item, id = '') {
+  const idAttr = id ? ` id="${id}"` : '';
+  if (item?.image) {
+    return `<div class="qimg has-photo"${idAttr}>
+              <img src="${escapeHtml(item.image)}" alt="صورة السؤال" class="qphoto">
+            </div>`;
+  }
+  return `<div class="qimg"${idAttr}>${escapeHtml(item?.emoji || '❓')}</div>`;
+}
+
 function renderQuestionBody(item) {
   const body = document.getElementById('qbody');
   if (!body) return;
@@ -1202,7 +1214,7 @@ function renderQuestionBody(item) {
   }
 
   body.innerHTML = `
-    <div class="qimg" id="qimg">${item.emoji || '❓'}</div>
+    ${questionVisual(item, 'qimg')}
     <div class="qtext" id="qtext">${item.question}</div>
     <div class="atext" id="atext">${item.answer}</div>
   `;
@@ -1284,21 +1296,30 @@ function award(team, opts = {}) {
     Sound.skip();
   }
 
-  stateUsed[activeRound][current.ci][current.row] = true;
-  closeQuestion();
-  renderBoard();
+  // نفس سبب `answerPublishGrace` في finishAnsweredQuestion: من يعطي النقاط
+  // قد يكون صاحب الدور لا المضيف، فيفقد صلاحية البثّ فور انتقال الدور عنه
+  const hadControl = canControlGame();
+  answerPublishGrace = hadControl;
 
-  // الدور ينتقل للفريق الآخر، إلا مع «استريح» فيبقى مع نفس الفريق
-  if (!opts.keepTurn) switchTurn();
+  try {
+    stateUsed[activeRound][current.ci][current.row] = true;
+    closeQuestion();
+    renderBoard();
 
-  // انتهت كل الخلايا؟ نعرض شاشة الفوز
-  if (isGameFinished()) {
-    if (isOnlineHost()) publishGameState({ phase: 'ended' });
-    showEndScreen();
-    return;
+    // الدور ينتقل للفريق الآخر، إلا مع «استريح» فيبقى مع نفس الفريق
+    if (!opts.keepTurn) switchTurn();
+
+    // انتهت كل الخلايا؟ نعرض شاشة الفوز
+    if (isGameFinished()) {
+      if (hadControl) publishGameState({ phase: 'ended' });
+      showEndScreen();
+      return;
+    }
+
+    if (hadControl) publishGameState();
+  } finally {
+    answerPublishGrace = false;
   }
-
-  if (isOnlineHost()) publishGameState();
 }
 
 function closeQuestion() {
@@ -1321,9 +1342,16 @@ function isOnlineHost() {
   return isOnlineGame() && !!currentPlayer?.is_host;
 }
 
+// من أجاب للتوّ يبقى مخوّلاً بالبثّ حتى ينتهي إغلاق سؤاله.
+//
+// ⚠️ بدون هذا يقف الدور عند من لعب: صاحب الدور يجيب، ثم ينتقل الدور عنه،
+// فيفقد الصلاحية قبل أن يبثّ الانتقال نفسه — فتبقى بقية الأجهزة على الدور
+// القديم إلى الأبد. (لا تظهر عند المضيف لأنه مخوّل دائماً.)
+let answerPublishGrace = false;
+
 // من يحقّ له تحديث حالة اللعبة: المضيف أو صاحب الدور (لأنه هو من يجيب)
 function canControlGame() {
-  return isOnlineHost() || isMyTurn();
+  return isOnlineHost() || isMyTurn() || answerPublishGrace;
 }
 
 // صاحب الروم يبثّ حالة اللعبة كاملة حتى تظهر نفسها على كل الأجهزة
@@ -1451,6 +1479,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   updateTotalStats();
+  // نبدأ قراءة قائمة السحب فوراً حتى تكون جاهزة قبل أول دمج من السحابة
+  fetchRetiredQuestions();
   syncBundledQuestionBank();
 });
 
@@ -1470,6 +1500,27 @@ const QBANK_FILES = [
   'data/questions-part10.json'
 ];
 
+/*
+  ⚠️ ملفات البيانات تحتاج نفس مُبطِّل الكاش الذي للـ CSS و JS.
+
+  كانت `data/*.json` تُجلب بلا `?v=` إطلاقاً، فيخدمها المتصفح من الكاش:
+  أي تصحيح أو إضافة في بنك الأسئلة **لا يصل للاعب** مهما رفعنا إصدار
+  السكربتات. اكتُشف عملياً — تصحيحات مرفوعة كانت تُقرأ من نسخة قديمة.
+
+  نقرأ الإصدار من وسم game.js نفسه، فيبقى المفتاح واحداً: رقم `?v=` في
+  index.html يبطّل الكاش للسكربتات والتنسيقات والبيانات معاً.
+*/
+function assetVersion() {
+  const src = document.querySelector('script[src*="game.js"]')?.getAttribute('src') || '';
+  const m = src.match(/[?&]v=([^&]+)/);
+  return m ? m[1] : '';
+}
+
+function versionedUrl(path) {
+  const v = assetVersion();
+  return v ? `${path}${path.includes('?') ? '&' : '?'}v=${encodeURIComponent(v)}` : path;
+}
+
 // نجلب الملفات مرة واحدة فقط لكل تحميل صفحة ونعيد استخدام النتيجة،
 // لأن الدالة تُستدعى مرتين (عند التحميل وبعد سحب السحابة) وكان ذلك يضاعف الطلبات
 let bundledQuestionFilesPromise = null;
@@ -1480,7 +1531,7 @@ function fetchBundledQuestionFiles() {
 
   bundledQuestionFilesPromise = Promise.all(QBANK_FILES.map(async (path) => {
     try {
-      const res = await fetch(path);
+      const res = await fetch(versionedUrl(path));
       if (!res.ok) return {};
       const data = await res.json();
       return (data && typeof data === 'object') ? data : {};
@@ -1493,10 +1544,43 @@ function fetchBundledQuestionFiles() {
   return bundledQuestionFilesPromise;
 }
 
-// يدمج أسئلة جديدة داخل البنك بدون حذف أي سؤال مضاف يدوياً،
-// ويتجاهل السؤال إذا كان نصه موجوداً مسبقاً في نفس الفئة والمستوى
+// قائمة الأسئلة المسحوبة، تُقرأ مرة واحدة لكل تحميل صفحة.
+//
+// `retiredTexts` يفحصه الدمج نفسه، فالسؤال المسحوب لا يعود من أي مصدر:
+// لا من ملفات المشروع ولا من نسخة Supabase ولا من بثّ لحظي. بدون هذا كانت
+// المزامنة اللحظية تعيد زرع ما سحبناه للتوّ.
+let retiredQuestionsPromise = null;
+let retiredTexts = new Set();
+
+function fetchRetiredQuestions() {
+  if (retiredQuestionsPromise) return retiredQuestionsPromise;
+
+  retiredQuestionsPromise = fetch(versionedUrl('data/retired-questions.json'))
+    .then(res => (res.ok ? res.json() : null))
+    .then(data => (Array.isArray(data?.retire) ? data.retire : []))
+    .catch(() => [])    // غياب الملف ليس خطأً
+    .then(list => {
+      retiredTexts = new Set(list.map(t => String(t).trim()).filter(Boolean));
+      return list;
+    });
+
+  return retiredQuestionsPromise;
+}
+
+/*
+  يدمج أسئلة الملفات داخل البنك بدون حذف أي سؤال أضافه المستخدم.
+
+  ⚠️ كان الدمج يتجاهل أي سؤال نصّه موجود مسبقاً — أي أنه **لا يستطيع تصحيح
+  إجابة خاطئة أبداً**. أي تصحيح في ملفات المشروع كان يموت عند حدود المتصفح:
+  النسخة القديمة محفوظة في localStorage وفي Supabase فتبقى هي المعروضة.
+
+  الآن ملفات المشروع مرجعٌ لإجابة السؤال الذي جاء منها: إن اختلفت الإجابة
+  حُدِّثت. ما يضيفه المستخدم يدوياً لا تمسّه (لأنه ليس في الملفات أصلاً)،
+  والصورة الملصقة محلياً تبقى كما هي.
+*/
 function mergeIntoQuestionBank(bank, incoming) {
   let added = 0;
+  let fixed = 0;
 
   Object.keys(incoming).forEach(cat => {
     const src = incoming[cat];
@@ -1510,18 +1594,61 @@ function mergeIntoQuestionBank(bank, incoming) {
       if (!Array.isArray(bank[cat][diff])) bank[cat][diff] = [];
       const incomingList = Array.isArray(src[diff]) ? src[diff] : [];
 
-      const seen = new Set(bank[cat][diff].map(q => String(q?.question || '').trim()));
+      const byText = new Map();
+      bank[cat][diff].forEach(q => {
+        const t = String(q?.question || '').trim();
+        if (t && !byText.has(t)) byText.set(t, q);
+      });
+
       incomingList.forEach(q => {
         const text = String(q?.question || '').trim();
-        if (!text || seen.has(text)) return;
+        if (!text || retiredTexts.has(text)) return;
+
+        const existing = byText.get(text);
+        if (existing) {
+          const newAnswer = String(q.answer ?? '').trim();
+          if (newAnswer && String(existing.answer ?? '').trim() !== newAnswer) {
+            existing.answer = q.answer;
+            fixed++;
+          }
+          // الإيموجي لا يُفرض على سؤال أُلصقت به صورة — الصورة أولى بالعرض
+          if (q.emoji && !existing.image && existing.emoji !== q.emoji) {
+            existing.emoji = q.emoji;
+          }
+          return;
+        }
+
         bank[cat][diff].push(q);
-        seen.add(text);
+        byText.set(text, q);
         added++;
       });
     });
   });
 
-  return added;
+  return { added, fixed };
+}
+
+/*
+  الأسئلة المسحوبة: إعادة صياغة سؤال في الملفات تُنتج سؤالاً «جديداً» في نظر
+  الدمج، فيبقى المعيب جنب المصحَّح. هذه القائمة تُسقط نصوصاً بعينها من بنك
+  كل جهاز — وهي الطريقة الوحيدة للتخلّص من سؤال معيب سبق أن انتشر.
+  أضف نص السؤال القديم حرفياً عند إعادة صياغة أي سؤال.
+*/
+function retireQuestions(bank, texts) {
+  const drop = new Set((texts || []).map(t => String(t).trim()).filter(Boolean));
+  if (!drop.size) return 0;
+
+  let removed = 0;
+  Object.keys(bank).forEach(cat => {
+    ['easy', 'medium', 'hard'].forEach(diff => {
+      if (!Array.isArray(bank[cat]?.[diff])) return;
+      const before = bank[cat][diff].length;
+      bank[cat][diff] = bank[cat][diff]
+        .filter(q => !drop.has(String(q?.question || '').trim()));
+      removed += before - bank[cat][diff].length;
+    });
+  });
+  return removed;
 }
 
 // يضمن أن كل فئة موجودة في البنك تظهر أيضاً في قائمة الفئات
@@ -1542,15 +1669,27 @@ function syncCategoriesWithBank() {
 async function syncBundledQuestionBank() {
   try {
     const files = await fetchBundledQuestionFiles();
+
+    // الإسقاط قبل الدمج: لو أُعيدت صياغة سؤال، نحذف القديم ثم نضيف الجديد
+    const removed = retireQuestions(QBANK, await fetchRetiredQuestions());
+
     let added = 0;
-    files.forEach(data => { added += mergeIntoQuestionBank(QBANK, data); });
+    let fixed = 0;
+    files.forEach(data => {
+      const r = mergeIntoQuestionBank(QBANK, data);
+      added += r.added;
+      fixed += r.fixed;
+    });
 
     const newCats = syncCategoriesWithBank();
 
-    if (added > 0 || newCats > 0) {
+    if (added > 0 || fixed > 0 || removed > 0 || newCats > 0) {
       saveJSON('mr_bank', QBANK);
       saveJSON('mr_categories', CATEGORIES);
     }
+    // لا ندفع التصحيح للسحابة: الكتابة في game_settings مقصورة على الإدارة،
+    // فمحاولة كل لاعب تفشل بخطأ RLS وتملأ السجل بلا فائدة. لا حاجة إليها
+    // أصلاً — كل جهاز يصحّح نفسه من ملفات المشروع عند كل تحميل.
 
     updateTotalStats();
 
@@ -1564,6 +1703,9 @@ async function syncBundledQuestionBank() {
 
     if (added > 0) {
       log(`📚 تم تحميل ${added} سؤال جديد من ملفات المشروع`, 'success');
+    }
+    if (fixed > 0 || removed > 0) {
+      log(`🩹 تصحيح البنك: ${fixed} إجابة مُحدَّثة و${removed} سؤال مسحوب`, 'success');
     }
 
     return added;
@@ -1776,7 +1918,7 @@ function renderChoices(item) {
   const letters = ['أ', 'ب', 'ج', 'د'];
 
   body.innerHTML = `
-    <div class="qimg">${item.emoji || '❓'}</div>
+    ${questionVisual(item)}
     <div class="qtext">${escapeHtml(item.question)}</div>
     <div class="choice-hint">${
       done ? '' : (mine ? '👈 اختر إجابتك' : `⏳ ${escapeHtml(turn?.name || 'لاعب آخر')} يجيب الآن`)
@@ -1853,17 +1995,26 @@ function submitAnswer(index) {
 function finishAnsweredQuestion() {
   if (!current) return;
 
-  stateUsed[activeRound][current.ci][current.row] = true;
-  lastAnswer = null;
-  closeQuestion();
-  renderBoard();
-  switchTurn();
+  // نمدّ صلاحية البثّ عبر تبديل الدور، وإلا بقي الدور واقفاً عند من أجاب
+  // على كل الأجهزة الأخرى
+  const hadControl = canControlGame();
+  answerPublishGrace = hadControl;
 
-  if (isGameFinished()) {
-    if (canControlGame()) publishGameState({ phase: 'ended' });
-    showEndScreen();
-    return;
+  try {
+    stateUsed[activeRound][current.ci][current.row] = true;
+    lastAnswer = null;
+    closeQuestion();
+    renderBoard();
+    switchTurn();
+
+    if (isGameFinished()) {
+      if (hadControl) publishGameState({ phase: 'ended' });
+      showEndScreen();
+      return;
+    }
+
+    if (hadControl) publishGameState();
+  } finally {
+    answerPublishGrace = false;
   }
-
-  if (canControlGame()) publishGameState();
 }

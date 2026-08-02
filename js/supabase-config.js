@@ -14,7 +14,19 @@ function initSupabase() {
       return false;
     }
 
-    supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // الجلسة تُحفظ في المتصفح وتُجدَّد تلقائياً: اللاعب يسجّل دخوله مرة
+    // على الجهاز، ولا يُطلب منه ذلك ثانية إلا إذا ضغط «خروج».
+    // مكتوبة صراحةً لا اتكالاً على الافتراضي — هذا سلوك نعتمد عليه.
+    supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        storage: window.localStorage,
+        // ⚠️ لا تضبط storageKey: الجلسات المحفوظة الآن تحت المفتاح الافتراضي،
+        // وتغييره يُخرج كل اللاعبين مرة واحدة — وهو عين ما نصلحه هنا.
+        detectSessionInUrl: true
+      }
+    });
     console.log('✅ Supabase initialized');
     return true;
   } catch (error) {
