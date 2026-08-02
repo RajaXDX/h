@@ -40,7 +40,12 @@ async function testSupabaseConnection() {
   if (!supa) return false;
 
   try {
-    const { data, error } = await supa.from('categories').select('count', { count: 'exact' }).limit(1);
+    // ⚠️ كان الفحص على جدول `categories` — وهو **غير موجود إطلاقاً**.
+    // الإعدادات كلها في `game_settings` كصفوف (categories / points /
+    // question_bank). فكان الفحص يفشل دائماً، فيطبع تحذيراً أحمر في كل تحميل
+    // ويضع الحالة «📴 وضع محلي» رغم أن الاتصال سليم — وأيّهما ينتهي أخيراً
+    // (هو أم سحب البيانات) هو من يحسم ما يراه اللاعب.
+    const { data, error } = await supa.from('game_settings').select('id').limit(1);
 
     if (error) {
       console.warn('⚠️ Supabase connection warning:', error.message);
