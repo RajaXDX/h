@@ -1601,7 +1601,8 @@ const QBANK_FILES = [
   'data/questions-part8.json',
   'data/questions-part9.json',
   'data/questions-part10.json',
-  'data/questions-part11.json'
+  'data/questions-part11.json',
+  'data/questions-part12.json'
 ];
 
 /*
