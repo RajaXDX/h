@@ -666,6 +666,19 @@ header {
   border-color: var(--gold);
 }
 
+/* زرّان جنب بعض تحت لوحة النتائج: الرجوع للرئيسية ولعبة جديدة */
+.game-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.game-actions .reset-btn {
+  margin: 0;   /* التوسيط صار من الحاوية لا من الهامش التلقائي */
+}
+
 .round-tabs {
   display: flex;
   justify-content: center;

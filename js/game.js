@@ -660,6 +660,43 @@ async function backToSetupConfirm() {
   }
 }
 
+// الخروج من الجولة إلى الشاشة الرئيسية — غير «لعبة جديدة» التي تعيدك
+// لاختيار الفئات وأنت ما زلت داخل الروم.
+async function exitToHomeConfirm() {
+  const online = isOnlineGame();
+  const warning = online
+    ? 'الرجوع للقائمة الرئيسية؟ بتخرج من الروم وبيروح كل التقدم الحالي'
+    : 'الرجوع للقائمة الرئيسية؟ بيروح كل التقدم الحالي';
+
+  if (!await uiConfirm(warning)) return;
+
+  // نغلق نافذة السؤال أولاً وإلا بقيت معلّقة فوق الشاشة الرئيسية
+  const overlay = document.getElementById('overlay');
+  if (overlay) overlay.classList.remove('show');
+  current = null;
+  lastAnswer = null;
+  clearActiveLifeline();
+
+  // الخروج الحقيقي من الروم: يُلغي الاشتراكات ويخفي الشات ويمسح جلسة
+  // العودة التلقائية — بدونه يبقى اللاعب مشتركاً وشاشة الشات ظاهرة
+  if (online && typeof leaveRoom === 'function') {
+    try { await leaveRoom(); } catch (e) { console.warn('تعذّر الخروج من الروم:', e); }
+  }
+
+  selectedCats = [];
+  questionCache = {};
+  rounds = [];
+  stateUsed = {};
+  scores = { A: 0, B: 0 };
+  lifelineUsed = { A: [], B: [] };
+  turnOrder = [];
+  turnIndex = 0;
+  activeTeam = null;
+  activeRound = 0;
+
+  goToHome();
+}
+
 /* ============================= BOARD RENDERING ============================= */
 
 function renderTabs() {
