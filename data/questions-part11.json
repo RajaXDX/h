@@ -1,0 +1,87 @@
+{
+  "_ملاحظة": "فئة «منو المشهور» — قصاصات عيون. الصور في assets/famous/ بأسماء لاتينية (أسماء الملفات العربية تحتاج ترميزاً في الروابط). نص كل سؤال مختلف عمداً: الدمج يطابق بنص السؤال، فلو تكرّر النص لَما نجا إلا سؤال واحد من الخمسة عشر.",
+
+  "منو المشهور": {
+    "easy": [
+      {
+        "question": "من صاحب هذي العيون؟",
+        "answer": "كريستيانو رونالدو",
+        "image": "assets/famous/ronaldo.jpg"
+      },
+      {
+        "question": "لمن هذي العيون؟",
+        "answer": "محمد بن سلمان",
+        "image": "assets/famous/mbs.jpg"
+      },
+      {
+        "question": "خمّن صاحب هذي العيون",
+        "answer": "محمد عبده",
+        "image": "assets/famous/mohammed-abdu.jpg"
+      },
+      {
+        "question": "عيون من هذي؟",
+        "answer": "مستر بين",
+        "image": "assets/famous/mr-bean.jpg"
+      }
+    ],
+    "medium": [
+      {
+        "question": "من يكون صاحب هذي العيون؟",
+        "answer": "الشيخ زايد",
+        "image": "assets/famous/zayed.jpg"
+      },
+      {
+        "question": "هذي عيون أي مشهور؟",
+        "answer": "ايلون ماسك",
+        "image": "assets/famous/elon-musk.jpg"
+      },
+      {
+        "question": "من المشهور صاحب هذي العيون؟",
+        "answer": "اينشتاين",
+        "image": "assets/famous/einstein.jpg"
+      },
+      {
+        "question": "خمّن المشهور من عيونه",
+        "answer": "بوتين",
+        "image": "assets/famous/putin.jpg"
+      },
+      {
+        "question": "لأي مشهور هذي العيون؟",
+        "answer": "ستيف جوبز",
+        "image": "assets/famous/steve-jobs.jpg"
+      },
+      {
+        "question": "من صاحب هاتين العينين؟",
+        "answer": "صدام حسين",
+        "image": "assets/famous/saddam.jpg"
+      },
+      {
+        "question": "تعرّف على صاحب هذي العيون",
+        "answer": "محمد علي كلاي",
+        "image": "assets/famous/ali-clay.jpg"
+      }
+    ],
+    "hard": [
+      {
+        "question": "أي شخصية مشهورة هذي عيونها؟",
+        "answer": "تشرشل",
+        "image": "assets/famous/churchill.jpg"
+      },
+      {
+        "question": "من تكون هذي العيون؟",
+        "answer": "سعود الفيصل",
+        "image": "assets/famous/saud-alfaisal.jpg"
+      },
+      {
+        "question": "احزر صاحب هذي العيون",
+        "answer": "محمد صلاح",
+        "image": "assets/famous/mo-salah.jpg"
+      },
+      {
+        "question": "تعرف صاحب هذي العيون؟",
+        "answer": "موسوليني",
+        "image": "assets/famous/mussolini.jpg"
+      }
+    ]
+  }
+}
