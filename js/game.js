@@ -817,7 +817,11 @@ const ANSWER_POOLS = [
 
   ['الهلال','النصر','الاتحاد','الأهلي','الشباب','الاتفاق','التعاون','الفتح','الرائد'],
 
-  ['نوح','إبراهيم','موسى','عيسى','يوسف','يونس','سليمان','داود','أيوب','زكريا','هود','صالح'],
+  // ⚠️ أضِف كل صيغة إملائية شائعة: `findAnswerPool` تطابق **بداية** الإجابة،
+  // فـ«داوود عليه السلام» لا تطابق «داود» فتسقط لمشتّتات الفئة نفسها.
+  ['نوح','إبراهيم','ابراهيم','موسى','عيسى','يوسف','يونس','سليمان','داود','داوود',
+   'أيوب','زكريا','هود','صالح','آدم','ادم','شعيب','لوط','إدريس','ادريس',
+   'إسماعيل','اسماعيل','إسحاق','اسحاق','يعقوب','هارون','إلياس','اليسع','ذو الكفل'],
 
   ['القاهرة','الرياض','دبي','الدوحة','الكويت','المنامة','مسقط','عمّان','بيروت',
    'دمشق','بغداد','صنعاء','الرباط','الجزائر','تونس','طرابلس','الخرطوم'],
@@ -873,17 +877,38 @@ function findAnswerPool(correct) {
   if (!c) return null;
 
   for (const pool of ANSWER_POOLS) {
-    const hit = pool.some(item => {
+    // نأخذ أطول عنصر مطابق: «ذو الكفل» تسبق «ذو» لو وُجدت
+    let best = null;
+    pool.forEach(item => {
       const n = normalizeAnswer(item);
-      if (!n) return false;
+      if (!n) return;
       // مطابقة تامة، أو الإجابة هي العنصر متبوعاً بتوضيح: «آسيا (أكبر القارات)».
       // ⚠️ لا نقبل الاحتواء في أي موضع: «الحوت الأزرق» كان يطابق مجموعة
       // الألوان بسبب «الأزرق»، فتصير خياراته ألواناً.
-      return n === c || c.startsWith(n + ' ') || c.startsWith(n + '(');
+      const hit = n === c || c.startsWith(n + ' ') || c.startsWith(n + '(');
+      if (hit && (!best || n.length > best.length)) best = n;
     });
-    if (hit) return pool;
+    if (best) return { pool, matchedLength: best.length };
   }
   return null;
+}
+
+/*
+  اللاحقة التي تتبع الاسم في الإجابة: «يونس **عليه السلام**».
+
+  ⚠️ بدونها ينكشف الجواب فوراً: المشتّتات تأتي من المجموعة أسماءً مجرّدة،
+  فيبقى الخيار الصحيح وحده يحمل اللاحقة. ولا يكفي حذف الأسماء من المجموعة —
+  جرّبناه فصار أسوأ: كلها تسقط لمشتّتات الفئة فتستوي مرة وتفضح مرة.
+*/
+function answerSuffix(correct, matchedLength) {
+  const c = normalizeAnswer(correct);
+  if (!matchedLength || matchedLength >= c.length) return '';
+
+  // نقتطع من النص الأصلي بمحاذاة ما طابقناه في النص المطبَّع. الطولان
+  // متساويان لأن التطبيع يستبدل حرفاً بحرف ولا يحذف — عدا «ال» في البداية.
+  const lead = /^ال/.test(String(correct).trim()) ? 2 : 0;
+  const tail = String(correct).trim().slice(lead + matchedLength);
+  return /^[\s(]/.test(tail) ? tail : '';
 }
 
 // إجابة رقمية → مشتّتات رقمية قريبة، مع الحفاظ على وحدة القياس.
@@ -1035,18 +1060,31 @@ function buildChoices(item, categoryName, diffKey, seed) {
   const typed = findAnswerPool(correct);
   if (typed) {
     const c = normalizeAnswer(correct);
-    const others = typed.filter(x => {
+    const suffix = answerSuffix(correct, typed.matchedLength);
+
+    // نستبعد الصيغ الإملائية الأخرى للاسم نفسه («داود» أمام «داوود»)
+    const others = typed.pool.filter(x => {
       const n = normalizeAnswer(x);
       return n !== c && !c.includes(n) && !n.includes(c);
     });
 
     if (others.length >= 3) {
       const picked = [];
+      const seen = new Set();
       const avail = others.slice();
       while (picked.length < 3 && avail.length) {
-        picked.push(avail.splice(Math.floor(rand() * avail.length), 1)[0]);
+        const one = avail.splice(Math.floor(rand() * avail.length), 1)[0];
+        // ⚠️ المجموعة تحوي صيغاً إملائية متعددة للاسم الواحد («آدم» و«ادم»)،
+        // فبلا هذا يظهران خيارين منفصلين لنفس الاسم أمام اللاعب
+        const key = normalizeAnswer(one);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        picked.push(one);
       }
-      return shuffleChoices(correct, picked, rand);
+      // اللاحقة تُلحق بالجميع حتى لا يتميّز الصحيح بها
+      if (picked.length === 3) {
+        return shuffleChoices(correct, picked.map(p => p + suffix), rand);
+      }
     }
   }
 
