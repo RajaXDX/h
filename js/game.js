@@ -911,10 +911,35 @@ function answerSuffix(correct, matchedLength) {
   return /^[\s(]/.test(tail) ? tail : '';
 }
 
+/*
+  الشرح الملحق بالإجابة بين قوسين.
+
+  ⚠️ في الأسئلة الحسابية تحمل الإجابة حلّها معها:
+  «36 تفاحة (12x3 =36 )» و«العدد هو 3 (لأن 3 × 3 = 9، ثم 9 + 5 = 14)».
+  المشتّتات الرقمية تبدّل الرقم الأول فقط، فيبقى الشرح **نفسه حرفياً في
+  الخيارات الأربعة وهو يذكر الرقم الصحيح** — يقرأه اللاعب فيعرف الجواب بلا
+  تفكير. نُسقط الشرح من نصّ الخيارات وحدها؛ الإجابة المحفوظة تبقى كاملة
+  فيظهر الشرح في الوضع المحلي عند كشف الإجابة.
+*/
+function stripTrailingNote(text) {
+  const t = String(text || '').trim();
+  const m = t.match(/^(.*?)\s*[(（][^)）]*[)）]\s*[.。]?$/);
+  if (!m) return t;
+  const head = m[1].trim();
+  return head ? head : t;   // إجابة كلّها بين قوسين: نتركها كما هي
+}
+
 // إجابة رقمية → مشتّتات رقمية قريبة، مع الحفاظ على وحدة القياس.
 // «206 عظمة» تنافسها «198 عظمة» لا «الرياض».
 function numericDistractors(correct, rand) {
-  const m = String(correct).match(/(\d[\d,]*)/);
+  const text = String(correct);
+
+  // ⚠️ النِّسَب والمجالات لا تُبدَّل بتغيير رقم واحد: «من 1:15 إلى 1:18»
+  // كان يصير «من 3:15 إلى 1:18» — تركيب لا معنى له، والجزء الثابت يبقى
+  // شاهداً على الصحيح. ندعها لمشتّتات الفئة.
+  if (/\d\s*[:：/–—-]\s*\d/.test(text)) return null;
+
+  const m = text.match(/(\d[\d,]*)/);
   if (!m) return null;
 
   const raw = m[1].replace(/,/g, '');
@@ -1088,9 +1113,12 @@ function buildChoices(item, categoryName, diffKey, seed) {
     }
   }
 
-  // 2) إجابة رقمية — مشتّتات رقمية
-  const nums = numericDistractors(correct, rand);
-  if (nums) return shuffleChoices(correct, nums, rand);
+  // 2) إجابة رقمية — مشتّتات رقمية.
+  // نبني الخيارات على الإجابة **بلا شرحها**: الشرح يتكرّر حرفياً في الأربعة
+  // ويذكر الرقم الصحيح، فيفضحه (راجع `stripTrailingNote`).
+  const head = stripTrailingNote(correct);
+  const nums = numericDistractors(head, rand);
+  if (nums) return shuffleChoices(head, nums, rand);
 
   // 3) الملاذ الأخير: إجابات أخرى من نفس الفئة.
   // الترتيب: تشابه السؤال أولاً ثم قرب الطول — الاعتماد على الطول وحده
