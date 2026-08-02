@@ -367,6 +367,78 @@ async function fetchAndApplyGameState() {
   }
 }
 
+/* ============================= PRESENCE (HEARTBEAT) ============================= */
+
+/*
+  من يُقفل المتصفح لا يمرّ بـ `leaveRoom`، فيبقى صفّه `active` إلى الأبد —
+  ومضيفٌ غادر فعلاً تظلّ الروم منسوبة إليه فلا أحد يتحكّم بها.
+
+  ⚠️ الحل ليس `beforeunload` + `leaveRoom`: تحديث الصفحة يُطلقه أيضاً، فيصير
+  كل تحديث خروجاً نهائياً وتنكسر «العودة بعد الانقطاع». النبضة تفرّق بين
+  الغياب والتحديث لأنها تقيس **الزمن** لا الحدث.
+
+  يتطلّب تشغيل `supabase-presence.sql`. وإن لم يُشغَّل بعد، فالعمود غير موجود
+  والتحديث يفشل — ولهذا كل شيء هنا يبتلع أخطاءه: اللعبة تعمل بلا نبضة كما
+  كانت، ولا تتعطّل.
+*/
+const HEARTBEAT_MS = 25000;      // كل 25 ثانية
+const ABSENT_AFTER_MS = 90000;   // صمت 90 ثانية = غائب
+
+let heartbeatTimer = null;
+let presenceWatchTimer = null;
+
+// مهلة سخيّة عمداً: متصفّح الجوال يُجمّد مؤقتات التبويب في الخلفية، ومهلة
+// ضيّقة تطرد لاعباً حاضراً لمجرّد أنه فتح واتساب لحظة.
+function isPlayerPresent(player) {
+  if (!player) return false;
+  const seen = player.last_seen_at || player.joined_at;
+  if (!seen) return true;        // العمود لم يُنشأ بعد → لا نحكم بالغياب
+  return (Date.now() - new Date(seen).getTime()) < ABSENT_AFTER_MS;
+}
+
+async function sendHeartbeat() {
+  if (!currentRoom || !currentPlayer) return;
+
+  try {
+    await supa
+      .from('room_players')
+      .update({ last_seen_at: new Date().toISOString() })
+      .eq('room_id', currentRoom.id)
+      .eq('player_id', currentPlayer.player_id);
+  } catch (e) {
+    // العمود غير موجود أو الشبكة متعثّرة — لا نُزعج اللاعب بشيء
+  }
+}
+
+function startPresence() {
+  stopPresence();
+  sendHeartbeat();
+
+  heartbeatTimer = setInterval(sendHeartbeat, HEARTBEAT_MS);
+
+  // فحص دوري مستقل عن الاشتراك اللحظي: لو انقطع البثّ تبقى الاستضافة
+  // قابلة للانتقال
+  presenceWatchTimer = setInterval(async () => {
+    if (!currentRoom) return;
+    await getRoomPlayers();
+    await syncMyHostStatus();
+  }, ABSENT_AFTER_MS / 2);
+
+  // العودة من الخلفية: ننبض فوراً بدل انتظار الدورة القادمة، وإلا بدا
+  // اللاعب غائباً وقد رجع
+  document.addEventListener('visibilitychange', onVisibleHeartbeat);
+}
+
+function onVisibleHeartbeat() {
+  if (document.visibilityState === 'visible') sendHeartbeat();
+}
+
+function stopPresence() {
+  if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+  if (presenceWatchTimer) { clearInterval(presenceWatchTimer); presenceWatchTimer = null; }
+  document.removeEventListener('visibilitychange', onVisibleHeartbeat);
+}
+
 /* ============================= ROOM LEAVING ============================= */
 
 /*
@@ -411,15 +483,18 @@ async function passHostBeforeLeaving() {
   try {
     const { data, error } = await supa
       .from('room_players')
-      .select('player_id')
+      .select('player_id, joined_at, last_seen_at')
       .eq('room_id', currentRoom.id)
       .eq('status', 'active')
       .neq('player_id', currentPlayer.player_id)
-      .order('joined_at', { ascending: true })
-      .limit(1);
+      .order('joined_at', { ascending: true });
 
     if (error) throw error;
-    const next = data?.[0]?.player_id;
+
+    // نُسلّمها لحاضر لا لغائب — وإلا سلّمناها لمن أقفل متصفحه قبلنا
+    // وعادت الروم بلا مضيف. وإن كان الجميع غائبين فأقدمهم أفضل من لا أحد.
+    const candidates = data || [];
+    const next = (candidates.find(isPlayerPresent) || candidates[0])?.player_id;
     if (!next) return;      // آخر من في الروم — لا أحد يستلم
 
     await transferHostTo(next);
@@ -691,6 +766,9 @@ function subscribeToRoom(roomId) {
       )
       .subscribe();
 
+    // النبضة تبدأ مع الاشتراك وتنتهي معه — كلاهما عمر الوجود في الروم
+    startPresence();
+
     log('✅ تم الاشتراك في تحديثات الروم', 'success');
   } catch (error) {
     console.error('Subscribe to room error:', error);
@@ -708,12 +786,18 @@ async function syncMyHostStatus() {
   const mine = roomPlayers.find(p => p.player_id === currentPlayer.player_id);
   if (!mine) return;
 
-  // شبكة أمان: لو غادر المضيف بلا تسليم (انقطع أو فشل التحديث) يستلمها
-  // أقدم لاعب باقٍ. المرشّح محسوم بالترتيب فلا يطالب بها اثنان معاً.
-  if (!mine.is_host && !roomPlayers.some(p => p.is_host)) {
-    if (roomPlayers[0]?.player_id === currentPlayer.player_id) {
+  // شبكة أمان: الروم بلا مضيف **حاضر** — إمّا غادر بلا تسليم، أو أقفل
+  // المتصفح فبقي صفّه `active` وهو غائب فعلاً (تكشفه النبضة).
+  // يستلمها أقدم لاعب **حاضر**، والمرشّح محسوم بالترتيب فلا يطالب بها اثنان.
+  const liveHost = roomPlayers.find(p => p.is_host && isPlayerPresent(p));
+
+  if (!mine.is_host && !liveHost) {
+    const heir = roomPlayers.find(isPlayerPresent);
+    if (heir?.player_id === currentPlayer.player_id) {
       if (await transferHostTo(currentPlayer.player_id)) {
         currentPlayer.is_host = true;
+        // المضيف الغائب قد يعود، فلا بدّ من نزع الصفة عنه صراحةً
+        await demoteAbsentHosts();
         announceHostPromotion();
       }
       return;
@@ -728,6 +812,26 @@ async function syncMyHostStatus() {
   }
 }
 
+/*
+  المضيف الغائب الذي استُلمت منه الروم قد يعود بعد انقطاع طويل. لو بقيت
+  `is_host = true` في صفّه لصار في الروم مضيفان يتنازعان التحكّم، ولأعاد
+  `syncMyHostStatus` عنده رفع صفته محلياً. فننزعها صراحةً عمّن سواي.
+*/
+async function demoteAbsentHosts() {
+  if (!currentRoom || !currentPlayer) return;
+
+  try {
+    await supa
+      .from('room_players')
+      .update({ is_host: false })
+      .eq('room_id', currentRoom.id)
+      .eq('is_host', true)
+      .neq('player_id', currentPlayer.player_id);
+  } catch (e) {
+    console.warn('تعذّر نزع الاستضافة عن الغائب:', e);
+  }
+}
+
 function announceHostPromotion() {
   uiAlert('👑 صرت صاحب الروم — تقدر توزّع الفرق وتتحكّم باللعبة');
   // لا حاجة لحفظ الجلسة: `restoreRoomSession` تستعيد المقعد من قاعدة
@@ -737,6 +841,7 @@ function announceHostPromotion() {
 }
 
 function unsubscribeFromRoom() {
+  stopPresence();
   Object.values(roomSubscriptions).forEach(sub => {
     if (sub) sub.unsubscribe();
   });
