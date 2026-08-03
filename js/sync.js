@@ -13,6 +13,8 @@ function mergeCategories(incoming) {
   incoming.forEach(cat => {
     const name = (cat?.name || '').trim();
     if (!name) return;
+    // فئة مسحوبة لا تعود من السحابة أيضاً — وإلا أعادها جهاز قديم لم يُحدَّث
+    if (typeof retiredCategoryNames !== 'undefined' && retiredCategoryNames.has(name)) return;
     if (CATEGORIES.some(c => c.name === name)) return;
     CATEGORIES.push({ name, ic: cat.ic || '✨' });
     added++;

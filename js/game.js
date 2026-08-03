@@ -1804,8 +1804,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   updateTotalStats();
-  // نبدأ قراءة قائمة السحب فوراً حتى تكون جاهزة قبل أول دمج من السحابة
+  // نبدأ قراءة قوائم السحب فوراً حتى تكون جاهزة قبل أول دمج من السحابة
   fetchRetiredQuestions();
+  fetchRetiredCategories();
   syncBundledQuestionBank();
 });
 
@@ -1896,6 +1897,52 @@ function fetchRetiredQuestions() {
 }
 
 /*
+  الفئات المسحوبة.
+
+  ⚠️ **حذف فئة من لوحة الإدارة لا يكفي**: `mergeCategories` تدمج ولا تحذف
+  (وهذا مقصود — يمنع أي شخص من محو فئات الجميع، راجع الملاحظة 3)، و
+  `syncCategoriesWithBank` تعيد أي فئة موجودة في البنك إلى القائمة. فملفات
+  المشروع كانت تُرجع كل فئة يحذفها المستخدم عند أول تحميل.
+
+  هذه القائمة تُسقطها من **الاثنين معاً** — قائمة الفئات وبنك الأسئلة —
+  على كل جهاز وفي كل تحميل. وأسئلتها تبقى في ملفات `data/` كما هي، فحذف
+  الاسم من هنا يُرجع الفئة كاملة بأسئلتها. لا شيء يضيع.
+*/
+let retiredCategoriesPromise = null;
+let retiredCategoryNames = new Set();
+
+function fetchRetiredCategories() {
+  if (retiredCategoriesPromise) return retiredCategoriesPromise;
+
+  retiredCategoriesPromise = fetch(versionedUrl('data/retired-categories.json'))
+    .then(res => (res.ok ? res.json() : null))
+    .then(data => (Array.isArray(data?.retire) ? data.retire : []))
+    .catch(() => [])    // غياب الملف ليس خطأً
+    .then(list => {
+      retiredCategoryNames = new Set(list.map(t => String(t).trim()).filter(Boolean));
+      return list;
+    });
+
+  return retiredCategoriesPromise;
+}
+
+function retireCategories() {
+  if (!retiredCategoryNames.size) return 0;
+
+  let dropped = 0;
+
+  Object.keys(QBANK).forEach(name => {
+    if (retiredCategoryNames.has(name.trim())) { delete QBANK[name]; dropped++; }
+  });
+
+  const before = CATEGORIES.length;
+  CATEGORIES = CATEGORIES.filter(c => !retiredCategoryNames.has(String(c?.name || '').trim()));
+  selectedCats = selectedCats.filter(c => !retiredCategoryNames.has(String(c?.name || '').trim()));
+
+  return Math.max(dropped, before - CATEGORIES.length);
+}
+
+/*
   يدمج أسئلة الملفات داخل البنك بدون حذف أي سؤال أضافه المستخدم.
 
   ⚠️ كان الدمج يتجاهل أي سؤال نصّه موجود مسبقاً — أي أنه **لا يستطيع تصحيح
@@ -1983,6 +2030,8 @@ function retireQuestions(bank, texts) {
 function syncCategoriesWithBank() {
   let added = 0;
   Object.keys(QBANK).forEach(name => {
+    // ⚠️ لا نُعيد فئة مسحوبة: هذه الدالة كانت أحد طريقَي عودتها
+    if (retiredCategoryNames.has(String(name).trim())) return;
     if (CATEGORIES.some(c => c.name === name)) return;
     const known = DEFAULT_CATEGORIES.find(c => c.name === name);
     CATEGORIES.push(known ? { ...known } : { name, ic: '✨' });
@@ -2000,6 +2049,7 @@ async function syncBundledQuestionBank() {
 
     // الإسقاط قبل الدمج: لو أُعيدت صياغة سؤال، نحذف القديم ثم نضيف الجديد
     const removed = retireQuestions(QBANK, await fetchRetiredQuestions());
+    await fetchRetiredCategories();
 
     let added = 0;
     let fixed = 0;
@@ -2009,9 +2059,13 @@ async function syncBundledQuestionBank() {
       fixed += r.fixed;
     });
 
+    // ⚠️ **بعد** الدمج لا قبله: الدمج هو ما يُعيد زرع الفئة المسحوبة من
+    // ملفات المشروع، فالإسقاط قبله لا يُجدي
+    const droppedCats = retireCategories();
+
     const newCats = syncCategoriesWithBank();
 
-    if (added > 0 || fixed > 0 || removed > 0 || newCats > 0) {
+    if (added > 0 || fixed > 0 || removed > 0 || newCats > 0 || droppedCats > 0) {
       saveJSON('mr_bank', QBANK);
       saveJSON('mr_categories', CATEGORIES);
     }

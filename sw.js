@@ -15,7 +15,7 @@
 */
 
 // ارفع الرقم عند تغيير قائمة `SHELL` — `activate` يمسح ما سواه فيُعاد التخزين نظيفاً
-const CACHE = 'raja-v3';
+const CACHE = 'raja-v4';
 
 // هيكل التطبيق: ما يكفي لفتح اللعبة والوضع المحلي بلا شبكة
 const SHELL = [
@@ -50,6 +50,7 @@ const SHELL = [
   './data/questions-part12.json',
   './data/questions-part13.json',
   './data/retired-questions.json',
+  './data/retired-categories.json',
 
   // صور «منو المشهور»: الفئة كلها صور، فبدونها تنكسر تماماً بلا إنترنت
   './assets/famous/ronaldo.jpg',
