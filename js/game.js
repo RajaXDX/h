@@ -740,6 +740,7 @@ function onQuestionTimeout() {
       correct: false,
       timedOut: true
     };
+    if (isMyTurn()) recordCategoryResult(current.cat?.name, false);
     renderChoices(item);
     publishGameState();
     setTimeout(() => finishAnsweredQuestion(), 2600);
@@ -1403,6 +1404,51 @@ async function quickAddAndShow(ci, row) {
   نحفظ نصوص ما عُرض لكل (فئة/مستوى) ونتجنّبها. وحين تُستهلك الفئة كاملة
   نُصفّرها ونبدأ دورة جديدة — فلا ننفد من الأسئلة أبداً.
 */
+/*
+  أداء هذا الجهاز حسب الفئة.
+
+  ⚠️ **إحصاءات جهاز لا إحصاءات لاعب**: في الوضع المحلي يتشارك الفريقان جهازاً
+  واحداً، فلا سبيل لنسبة الإجابة إلى شخص بعينه. لذلك العنوان في الواجهة
+  «أداء هذا الجهاز» لا «أداؤك» — الأمانة أولى من رقم يوحي بما لا يدلّ عليه.
+*/
+const CAT_STATS_KEY = 'mr_cat_stats';
+
+function recordCategoryResult(categoryName, correct) {
+  const name = String(categoryName || '').trim();
+  if (!name) return;
+
+  const raw = loadJSON(CAT_STATS_KEY, {});
+  const stats = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
+  const cell = stats[name] || { tries: 0, correct: 0 };
+
+  cell.tries += 1;
+  if (correct) cell.correct += 1;
+  stats[name] = cell;
+
+  saveJSON(CAT_STATS_KEY, stats);
+}
+
+// نطلب ثلاث محاولات على الأقل: نسبة مبنية على محاولة واحدة (0% أو 100%)
+// تُضلّل أكثر مما تفيد
+function getCategoryStats(minTries = 3) {
+  const raw = loadJSON(CAT_STATS_KEY, {});
+  const stats = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
+
+  return Object.entries(stats)
+    .filter(([, v]) => (v?.tries || 0) >= minTries)
+    .map(([name, v]) => ({
+      name,
+      tries: v.tries,
+      correct: v.correct,
+      pct: Math.round((v.correct / v.tries) * 100)
+    }))
+    .sort((a, b) => b.pct - a.pct || b.tries - a.tries);
+}
+
+function resetCategoryStats() {
+  saveJSON(CAT_STATS_KEY, {});
+}
+
 const SEEN_KEY = 'mr_seen_questions';
 const SEEN_MAX_CELLS = 400;   // سقف يمنع تضخّم التخزين مع مرور الشهور
 
@@ -1567,6 +1613,12 @@ function award(team, opts = {}) {
   answerPublishGrace = hadControl;
 
   try {
+    // «استريح» تخطٍّ مقصود لا محاولة، ولا يُحتسب في أداء الفئة.
+    // وفي الأونلاين الاحتساب يتم في `submitAnswer` فلا نُكرّره هنا.
+    if (!opts.keepTurn && !isOnlineGame()) {
+      recordCategoryResult(current.cat?.name, !!team);
+    }
+
     stateUsed[activeRound][current.ci][current.row] = true;
     closeQuestion();
     renderBoard();
@@ -2251,6 +2303,9 @@ function submitAnswer(index) {
     team,
     correct
   };
+
+  // نحتسب أداء الفئة على من أجاب فعلاً — أي على هذا الجهاز
+  if (isMyTurn()) recordCategoryResult(current.cat?.name, correct);
 
   if (correct) {
     scores[team] = (scores[team] || 0) + pts;

@@ -666,6 +666,87 @@ header {
   border-color: var(--gold);
 }
 
+/* ---- أداء الجهاز حسب الفئة ---- */
+
+.cat-stats-label {
+  font-family: 'Cairo';
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--gold);
+  margin: 14px 0 8px;
+}
+
+.cat-stat { margin-bottom: 12px; }
+
+.cat-stat-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.cat-stat-name {
+  font-family: 'Tajawal';
+  font-size: 14px;
+  color: var(--sand);
+}
+
+.cat-stat-pct {
+  font-family: 'Cairo';
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--sand);
+}
+
+.cat-stat-bar {
+  height: 8px;
+  border-radius: 6px;
+  background: rgba(239, 227, 198, 0.14);
+  overflow: hidden;
+  margin: 5px 0 3px;
+}
+
+.cat-stat-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 6px;
+  background: var(--gold);
+}
+
+.cat-stat-sub {
+  font-family: 'Tajawal';
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.cat-stats-empty {
+  font-family: 'Tajawal';
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.cat-stats-hint {
+  font-size: 12px;
+  opacity: 0.75;
+  margin-top: 4px;
+}
+
+.cat-stats-reset {
+  margin-top: 10px;
+  min-height: 40px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  background: none;
+  color: var(--muted);
+  border: 1px solid rgba(239, 227, 198, 0.3);
+  font-family: 'Tajawal';
+  font-size: 12px;
+}
+
+.cat-stats-reset:hover { color: var(--sand); border-color: var(--gold); }
+
 /* ---- مؤقّت السؤال ---- */
 
 .timer-row {

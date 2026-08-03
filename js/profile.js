@@ -154,10 +154,64 @@ async function showLeaderboard() {
 
 /* ---- شاشة الملف الشخصي ---- */
 
+/*
+  أداء هذا الجهاز حسب الفئة.
+
+  ⚠️ العنوان «أداء هذا الجهاز» مقصود: في الوضع المحلي يتشارك الفريقان جهازاً
+  واحداً فلا تُنسب الإجابة لشخص. تسميتها «أداؤك» تُوهم بدقّة لا وجود لها.
+*/
+function renderCategoryStats() {
+  const box = document.getElementById('catStatsBox');
+  if (!box) return;
+
+  const rows = typeof getCategoryStats === 'function' ? getCategoryStats(3) : [];
+
+  if (!rows.length) {
+    box.innerHTML = `
+      <div class="profile-section-title">🎯 أداء هذا الجهاز حسب الفئة</div>
+      <div class="cat-stats-empty">
+        العبوا بضعة أسئلة وبتظهر هنا أقوى فئاتكم وأضعفها.
+        <div class="cat-stats-hint">تحتاج 3 محاولات على الأقل في الفئة</div>
+      </div>`;
+    return;
+  }
+
+  // ⚠️ لا نقسم إلى «أقوى/أضعف» إلا إذا كان في القائمة ما يكفي لقسمين
+  // متمايزين. بفئتين كانت الثانية — ولو 0% — تُعرض تحت «الأقوى».
+  const split = rows.length >= 4;
+  const best = split ? rows.slice(0, 3) : rows;
+  const worst = split ? rows.slice(-3).reverse().filter(r => !best.includes(r)) : [];
+
+  const line = (r) => `
+    <div class="cat-stat">
+      <div class="cat-stat-head">
+        <span class="cat-stat-name">${escapeHtml(r.name)}</span>
+        <span class="cat-stat-pct">${r.pct}%</span>
+      </div>
+      <div class="cat-stat-bar"><span style="width:${r.pct}%"></span></div>
+      <div class="cat-stat-sub">${r.correct} من ${r.tries}</div>
+    </div>`;
+
+  box.innerHTML = `
+    <div class="profile-section-title">🎯 أداء هذا الجهاز حسب الفئة</div>
+    ${best.length ? `<div class="cat-stats-label">${split ? '💪 الأقوى' : '📊 حسب الفئة'}</div>
+                     ${best.map(line).join('')}` : ''}
+    ${worst.length ? `<div class="cat-stats-label">📚 تحتاج مراجعة</div>
+                      ${worst.map(line).join('')}` : ''}
+    <button class="cat-stats-reset" onclick="clearCategoryStats()">مسح هذه الإحصاءات</button>`;
+}
+
+async function clearCategoryStats() {
+  if (!await uiConfirm('مسح أداء هذا الجهاز حسب الفئة؟')) return;
+  resetCategoryStats();
+  renderCategoryStats();
+}
+
 async function goToProfile() {
   Sound.click();
   showScreen('screen-profile');
   renderPrivacyControl();
+  renderCategoryStats();
 
   const box = document.getElementById('playerCardBox');
   if (box) box.innerHTML = '';
