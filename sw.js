@@ -15,7 +15,7 @@
 */
 
 // ارفع الرقم عند تغيير قائمة `SHELL` — `activate` يمسح ما سواه فيُعاد التخزين نظيفاً
-const CACHE = 'raja-v2';
+const CACHE = 'raja-v3';
 
 // هيكل التطبيق: ما يكفي لفتح اللعبة والوضع المحلي بلا شبكة
 const SHELL = [
@@ -48,6 +48,7 @@ const SHELL = [
   './data/questions-part10.json',
   './data/questions-part11.json',
   './data/questions-part12.json',
+  './data/questions-part13.json',
   './data/retired-questions.json',
 
   // صور «منو المشهور»: الفئة كلها صور، فبدونها تنكسر تماماً بلا إنترنت
@@ -65,7 +66,26 @@ const SHELL = [
   './assets/famous/churchill.jpg',
   './assets/famous/saud-alfaisal.jpg',
   './assets/famous/mo-salah.jpg',
-  './assets/famous/mussolini.jpg'
+  './assets/famous/mussolini.jpg',
+
+  // شعارات عالمية بالصور — نفس السبب
+  './assets/logos/apple.jpg',
+  './assets/logos/premier-league.jpg',
+  './assets/logos/disney.jpg',
+  './assets/logos/microsoft.jpg',
+  './assets/logos/netflix.jpg',
+  './assets/logos/osn.jpg',
+  './assets/logos/adidas.jpg',
+  './assets/logos/lg.jpg',
+  './assets/logos/playstation.jpg',
+  './assets/logos/puma.jpg',
+  './assets/logos/tesla.jpg',
+  './assets/logos/gucci.jpg',
+  './assets/logos/windows.jpg',
+  './assets/logos/paypal.jpg',
+  './assets/logos/lacoste.jpg',
+  './assets/logos/nestle.jpg',
+  './assets/logos/nvidia.jpg'
 ];
 
 self.addEventListener('install', (event) => {

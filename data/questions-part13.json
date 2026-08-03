@@ -1,0 +1,97 @@
+{
+  "_ملاحظة": "شعارات عالمية بالصور من مجلد logo عند المستخدم. الصور في assets/logos/ بأسماء لاتينية. نص كل سؤال مختلف عمداً — الدمج يطابق بنص السؤال فلو تكرّر لَما نجا إلا واحد. هذه إضافة لا استبدال: أسئلة الفئة النصّية باقية كما هي.",
+
+  "شعارات عالمية": {
+    "easy": [
+      {
+        "question": "ما هذا الشعار؟",
+        "answer": "آبل",
+        "image": "assets/logos/apple.jpg"
+      },
+      {
+        "question": "لأي جهة هذا الشعار؟",
+        "answer": "الدوري الإنجليزي",
+        "image": "assets/logos/premier-league.jpg"
+      },
+      {
+        "question": "شعار أي علامة تجارية هذا؟",
+        "answer": "ديزني",
+        "image": "assets/logos/disney.jpg"
+      },
+      {
+        "question": "تعرف صاحب هذا الشعار؟",
+        "answer": "مايكروسوفت",
+        "image": "assets/logos/microsoft.jpg"
+      },
+      {
+        "question": "أي شركة يرمز لها هذا الشعار؟",
+        "answer": "نتفليكس",
+        "image": "assets/logos/netflix.jpg"
+      }
+    ],
+    "medium": [
+      {
+        "question": "هذا شعار أي قناة؟",
+        "answer": "OSN",
+        "image": "assets/logos/osn.jpg"
+      },
+      {
+        "question": "خمّن العلامة التجارية من شعارها",
+        "answer": "أديداس",
+        "image": "assets/logos/adidas.jpg"
+      },
+      {
+        "question": "لمن هذا الشعار؟",
+        "answer": "إل جي",
+        "image": "assets/logos/lg.jpg"
+      },
+      {
+        "question": "أي ماركة هذا شعارها؟",
+        "answer": "بلايستيشن",
+        "image": "assets/logos/playstation.jpg"
+      },
+      {
+        "question": "حدّد الشركة صاحبة هذا الشعار",
+        "answer": "بوما",
+        "image": "assets/logos/puma.jpg"
+      },
+      {
+        "question": "هذا الشعار لأي شركة سيارات؟",
+        "answer": "تسلا",
+        "image": "assets/logos/tesla.jpg"
+      },
+      {
+        "question": "ما اسم العلامة التجارية صاحبة هذا الشعار؟",
+        "answer": "قوتشي",
+        "image": "assets/logos/gucci.jpg"
+      },
+      {
+        "question": "أي نظام تشغيل شعاره هذا؟",
+        "answer": "ويندوز",
+        "image": "assets/logos/windows.jpg"
+      }
+    ],
+    "hard": [
+      {
+        "question": "تعرّف على هذا الشعار",
+        "answer": "باي بال",
+        "image": "assets/logos/paypal.jpg"
+      },
+      {
+        "question": "احزر الشركة من شعارها",
+        "answer": "لاكوست",
+        "image": "assets/logos/lacoste.jpg"
+      },
+      {
+        "question": "شعار من هذا؟",
+        "answer": "نستله",
+        "image": "assets/logos/nestle.jpg"
+      },
+      {
+        "question": "أي علامة تجارية تستخدم هذا الشعار؟",
+        "answer": "إنفيديا",
+        "image": "assets/logos/nvidia.jpg"
+      }
+    ]
+  }
+}
