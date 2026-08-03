@@ -23,6 +23,23 @@ function mergeCategories(incoming) {
   return added;
 }
 
+/*
+  سقف زمني لأي رحلة سحابة.
+
+  ⚠️ نداءات Supabase **بلا مهلة افتراضية**: لو تعثّرت الشبكة بقي الوعد
+  معلّقاً إلى الأبد، والمؤشر عالقاً على «🔄 جاري المزامنة...» بلا خطأ ولا
+  نجاح. الفشل الصريح أفضل من انتظار لا ينتهي.
+*/
+const SYNC_TIMEOUT_MS = 15000;
+
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('انتهت مهلة الاتصال بالسحابة')), ms))
+  ]);
+}
+
 // دالة المزامنة الرئيسية
 async function pushToCloud() {
   if (!supa) {
@@ -33,47 +50,27 @@ async function pushToCloud() {
   try {
     setSyncStatus('syncing');
 
-    // تصدير الفئات
-    const { error: catError } = await supa
-      .from('game_settings')
-      .upsert(
-        {
-          id: 'categories',
-          data: CATEGORIES,
-          updated_at: new Date().toISOString()
-        },
-        { onConflict: 'id' }
-      );
+    const now = new Date().toISOString();
+    const rows = [
+      { id: 'categories',    data: CATEGORIES, updated_at: now },
+      { id: 'points',        data: POINTS,     updated_at: now },
+      { id: 'question_bank', data: QBANK,      updated_at: now }
+    ];
 
-    if (catError) throw catError;
+    /*
+      ⚠️ **دفعة واحدة بمهلة** بدل ثلاث رحلات متتابعة.
 
-    // تصدير النقاط
-    const { error: pointsError } = await supa
-      .from('game_settings')
-      .upsert(
-        {
-          id: 'points',
-          data: POINTS,
-          updated_at: new Date().toISOString()
-        },
-        { onConflict: 'id' }
-      );
+      كانت ثلاث `await` متسلسلة: الفئات ثم النقاط ثم البنك (~190 KB)، فزمن
+      الشبكة يتضاعف ثلاثاً. والأسوأ أنه بلا مهلة إطلاقاً — لو تعثّرت رحلة
+      واحدة بقي المؤشر «🔄 جاري المزامنة...» إلى ما لا نهاية، وهذا ما بدا
+      «تعليقاً». الآن الثلاثة في `upsert` واحد وبسقف زمني يفشل صراحةً.
+    */
+    const { error } = await withTimeout(
+      supa.from('game_settings').upsert(rows, { onConflict: 'id' }),
+      SYNC_TIMEOUT_MS
+    );
 
-    if (pointsError) throw pointsError;
-
-    // تصدير بنك الأسئلة
-    const { error: bankError } = await supa
-      .from('game_settings')
-      .upsert(
-        {
-          id: 'question_bank',
-          data: QBANK,
-          updated_at: new Date().toISOString()
-        },
-        { onConflict: 'id' }
-      );
-
-    if (bankError) throw bankError;
+    if (error) throw error;
 
     setSyncStatus('synced');
     log('Data synced to cloud successfully', 'success');
@@ -96,16 +93,24 @@ async function pullFromCloudOnce() {
   try {
     setSyncStatus('syncing');
 
-    // الثلاثة بالتوازي بدل التسلسل (كانت ثلاث رحلات شبكة متتابعة قبل ظهور اللعبة)
+    // بالتوازي بدل التسلسل (كانت رحلات شبكة متتابعة قبل ظهور اللعبة)
     const [
       { data: catData, error: catError },
       { data: pointsData, error: pointsError },
-      { data: bankData, error: bankError }
-    ] = await Promise.all([
+      { data: bankData, error: bankError },
+      { data: retiredData }
+    ] = await withTimeout(Promise.all([
       supa.from('game_settings').select('data').eq('id', 'categories').single(),
       supa.from('game_settings').select('data').eq('id', 'points').single(),
-      supa.from('game_settings').select('data').eq('id', 'question_bank').single()
-    ]);
+      supa.from('game_settings').select('data').eq('id', 'question_bank').single(),
+      supa.from('game_settings').select('data').eq('id', 'retired_categories').maybeSingle()
+    ]), SYNC_TIMEOUT_MS);
+
+    // ⚠️ **قبل الدمج**: قائمة المحذوفات هي ما يمنع الدمج من إعادة زرعها.
+    // قراءتها بعده تعني أنها دخلت ثم خرجت، وقد تُحفظ بينهما.
+    if (Array.isArray(retiredData?.data)) {
+      applyCloudRetiredCategories(retiredData.data);
+    }
 
     if (!catError && Array.isArray(catData?.data) && catData.data.length > 0) {
       mergeCategories(catData.data);
@@ -122,9 +127,12 @@ async function pullFromCloudOnce() {
     if (!bankError && bankData?.data && Object.keys(bankData.data).length > 0) {
       mergeIntoQuestionBank(QBANK, bankData.data);
       syncCategoriesWithBank();
-      saveJSON('mr_bank', QBANK);
-      saveJSON('mr_categories', CATEGORIES);
     }
+
+    // الإسقاط بعد كل دمج — الدمج هو ما يُعيد الزرع
+    retireCategories();
+    saveJSON('mr_bank', QBANK);
+    saveJSON('mr_categories', CATEGORIES);
 
     setSyncStatus('synced');
     log('Data pulled from cloud successfully', 'success');

@@ -231,7 +231,7 @@ function renderAdminCategories() {
   });
 }
 
-function adminAddCategory() {
+async function adminAddCategory() {
   // ✅ حماية أمنية: التحقق من أن الإدمن مسجل دخول
   if (!isAdminLoggedIn) {
     uiAlert('❌ يجب تسجيل الدخول كإدمن أولاً');
@@ -248,9 +248,13 @@ function adminAddCategory() {
     return;
   }
 
+  // ⚠️ اسم سبق حذفه يبقى في قائمة السحب، فلو أُضيف بلا رفع السحب
+  // لاختفى فوراً عند أول دمج — وبدا كأن الإضافة لم تنجح
+  await unretireCategory(name);
+
   CATEGORIES.push({ name, ic: '✨' });
   saveJSON('mr_categories', CATEGORIES);
-  pushToCloud();
+  await pushToCloud();
   input.value = '';
   renderAdminCategories();
   populateBankCatSelect();
@@ -267,11 +271,20 @@ async function deleteCategory(name) {
 
   saveJSON('mr_categories', CATEGORIES);
   saveJSON('mr_bank', QBANK);
-  pushToCloud();
+
+  // ⚠️ تسجيل الحذف في السحابة **قبل** الدفع، وهو جوهر المسألة:
+  // بدونه لا يعرف أي جهاز آخر أن الفئة حُذفت، فيُعيدها دمجه عند أول تحميل
+  // — وترجع إليك أنت أيضاً عند تحديث الصفحة.
+  const published = await publishRetiredCategory(name);
+  await pushToCloud();
 
   renderAdminCategories();
   populateBankCatSelect();
-  uiAlert('✅ تم حذف الفئة بنجاح');
+  updateTotalStats?.();
+
+  uiAlert(published
+    ? '✅ تم حذف الفئة من كل الأجهزة'
+    : '⚠️ حُذفت من هذا الجهاز، لكن تعذّر تسجيل الحذف في السحابة — قد تعود');
 }
 
 /* ============================= QUESTION BANK MANAGEMENT ============================= */

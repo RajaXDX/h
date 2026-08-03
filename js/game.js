@@ -1926,6 +1926,75 @@ function fetchRetiredCategories() {
   return retiredCategoriesPromise;
 }
 
+/*
+  الحذف يجب أن **ينتشر**، وهذه هي العقدة الأصلية:
+
+  السحابة كانت تخزّن «الموجود» فقط، وكل جهاز يدمج ولا يستبدل — فغياب الفئة
+  من السحابة لا يعني «محذوفة» بل «لا معلومة عنها»، فيُعيدها أي جهاز عنده
+  نسخة قديمة. الحذف لم يكن له تمثيل في أي مكان.
+
+  الآن للحذف صفّ خاص في `game_settings` اسمه `retired_categories`. الإدارة
+  تكتب فيه عند الحذف، وكل جهاز يقرأه عند التحميل فيُسقط ما فيه. وقائمة
+  الملف `data/retired-categories.json` تبقى كأرضية ثابتة، والاثنتان تتّحدان.
+*/
+function applyCloudRetiredCategories(list) {
+  (list || []).forEach(n => {
+    const name = String(n || '').trim();
+    if (name) retiredCategoryNames.add(name);
+  });
+  return retiredCategoryNames.size;
+}
+
+// تُنادى من لوحة الإدارة عند حذف فئة: تُسجّل الحذف في السحابة ليصل الجميع
+async function publishRetiredCategory(name) {
+  const clean = String(name || '').trim();
+  if (!clean || !supa) return false;
+
+  try {
+    const { data } = await supa.from('game_settings')
+      .select('data').eq('id', 'retired_categories').maybeSingle();
+
+    const list = Array.isArray(data?.data) ? data.data.map(x => String(x).trim()) : [];
+    if (!list.includes(clean)) list.push(clean);
+
+    const { error } = await supa.from('game_settings')
+      .upsert({ id: 'retired_categories', data: list, updated_at: new Date().toISOString() },
+              { onConflict: 'id' });
+
+    if (error) throw error;
+    retiredCategoryNames.add(clean);
+    return true;
+  } catch (e) {
+    console.warn('تعذّر نشر حذف الفئة:', e);
+    return false;
+  }
+}
+
+// وعند إعادة إضافة فئة بنفس الاسم: نرفع عنها السحب وإلا اختفت فور إضافتها
+async function unretireCategory(name) {
+  const clean = String(name || '').trim();
+  if (!clean) return false;
+
+  retiredCategoryNames.delete(clean);
+  if (!supa) return true;
+
+  try {
+    const { data } = await supa.from('game_settings')
+      .select('data').eq('id', 'retired_categories').maybeSingle();
+
+    const list = Array.isArray(data?.data) ? data.data.map(x => String(x).trim()) : [];
+    if (!list.includes(clean)) return true;
+
+    await supa.from('game_settings')
+      .upsert({ id: 'retired_categories', data: list.filter(x => x !== clean),
+                updated_at: new Date().toISOString() }, { onConflict: 'id' });
+    return true;
+  } catch (e) {
+    console.warn('تعذّر رفع السحب عن الفئة:', e);
+    return false;
+  }
+}
+
 function retireCategories() {
   if (!retiredCategoryNames.size) return 0;
 
