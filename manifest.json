@@ -1,0 +1,27 @@
+{
+  "name": "تحدي رجا — لعبة أسئلة جماعية",
+  "short_name": "تحدي رجا",
+  "description": "لعبة أسئلة جماعية للعائلة والأصدقاء — أكثر من 2700 سؤال في 41 فئة.",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0A1A14",
+  "theme_color": "#0A1A14",
+  "icons": [
+    {
+      "src": "assets/logo.png",
+      "sizes": "238x244",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/share.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
