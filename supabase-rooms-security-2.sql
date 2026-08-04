@@ -176,8 +176,9 @@ CREATE POLICY "state_delete_admin" ON room_game_state
 
 
 -- ======================== الدفعة 8: التحقق ========================
--- المتوقّع: لا سياسة باسم allow_public_* على الجداول الأربعة، و16 سياسة
--- جديدة، ولا صلاحية لـ anon.
+-- المتوقّع: لا سياسة باسم allow_public_* على الجداول الأربعة، و**15** سياسة
+-- جديدة (5 رومات · 3 لاعبين · 3 شات · 4 حالة)، ولا صلاحية لـ anon.
+-- وأعمدة room_players القابلة للتحديث: player_name, status, left_at, last_seen_at
 
 SELECT tablename, policyname, cmd, roles
 FROM pg_policies
