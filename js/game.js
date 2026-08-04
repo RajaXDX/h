@@ -1518,13 +1518,35 @@ function pickFromBank(categoryName, row) {
   return { ...chosen };
 }
 
+/*
+  سقف التكبير.
+
+  `.qphoto` تعطي كل صورة عرضاً مقصوداً 440px، وهذا صحيح لصورة كبيرة وخاطئ
+  لصورة صغيرة: شعار «معادن» 57×35 بكسل كان يُعرض بتكبير **7.7×** فتبدو
+  حوافه ضبابية، ونفس الحال لشعار ويندوز 41×38.
+
+  ⚠️ **لا يُعالَج في CSS**: الحدّ يعتمد على الأبعاد الأصلية للصورة،
+  و`naturalWidth` لا تُعرف إلا بعد التحميل. لذلك `onload` على كل صورة.
+
+  و⚠️ **`max-width` لا `width`**: العرض المقصود يبقى كما هو، والسقف يقصّه
+  عند اللزوم فقط — والصورة الكبيرة لا يمسّها شيء. وعلى الجوال يبقى
+  `min(100%, …)` هو الحاكم فلا تفيض الصورة الصغيرة عن الشاشة.
+*/
+const MAX_PHOTO_UPSCALE = 3;
+
+function capPhotoUpscale(img) {
+  if (!img || !img.naturalWidth) return;
+  img.style.maxWidth = Math.round(img.naturalWidth * MAX_PHOTO_UPSCALE) + 'px';
+}
+
 // صورة السؤال إن وُجدت، وإلا الإيموجي. فئات مثل «شعارات» و«منو المشهور»
 // و«ميمز» بلا صورة سؤالها بلا معنى.
 function questionVisual(item, id = '') {
   const idAttr = id ? ` id="${id}"` : '';
   if (item?.image) {
     return `<div class="qimg has-photo"${idAttr}>
-              <img src="${escapeHtml(item.image)}" alt="صورة السؤال" class="qphoto">
+              <img src="${escapeHtml(item.image)}" alt="صورة السؤال" class="qphoto"
+                   onload="capPhotoUpscale(this)">
             </div>`;
   }
   return `<div class="qimg"${idAttr}>${escapeHtml(item?.emoji || '❓')}</div>`;
