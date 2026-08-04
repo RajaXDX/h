@@ -1,0 +1,117 @@
+{
+  "_ملاحظة": "شعارات سعودية بالصور من مجلد «sa logo» عند المستخدم. الصور في assets/sa-logos/ بأسماء لاتينية — الأسماء العربية تحتاج ترميزاً في الروابط وتتكسّر على بعض الخوادم، والإجابة العربية هنا لا في اسم الملف. نص كل سؤال مختلف عمداً: الدمج يطابق بنص السؤال، فلو تكرّر النص لَما نجا إلا سؤال واحد. وتجنّبنا التلميح لنوع الجهة (بنك/وزارة) لأن المشتّتات تأتي من نفس الفئة فيفضح التلميح الجواب. هذه الفئة صارت صوراً بحتة: أسئلتها النصّية مسحوبة في retired-questions.json.",
+
+  "شعارات سعودية": {
+    "easy": [
+      {
+        "question": "أي جهة سعودية شعارها هذا؟",
+        "answer": "أرامكو السعودية",
+        "image": "assets/sa-logos/aramco.jpg"
+      },
+      {
+        "question": "لمن يعود هذا الشعار السعودي؟",
+        "answer": "مصرف الراجحي",
+        "image": "assets/sa-logos/alrajhi.jpg"
+      },
+      {
+        "question": "ماذا يمثّل هذا الرمز؟",
+        "answer": "الريال السعودي",
+        "image": "assets/sa-logos/saudi-riyal.jpg"
+      },
+      {
+        "question": "احزر الجهة السعودية صاحبة هذا الشعار",
+        "answer": "المراعي",
+        "image": "assets/sa-logos/almarai.jpg"
+      },
+      {
+        "question": "هذا شعار أي جهة سعودية؟",
+        "answer": "مكتبة جرير",
+        "image": "assets/sa-logos/jarir.jpg"
+      },
+      {
+        "question": "شعار أي جهة سعودية ترى أمامك؟",
+        "answer": "وزارة التعليم",
+        "image": "assets/sa-logos/moe.jpg"
+      },
+      {
+        "question": "تعرف هذا الشعار السعودي؟",
+        "answer": "وزارة الصحة",
+        "image": "assets/sa-logos/moh.jpg"
+      }
+    ],
+    "medium": [
+      {
+        "question": "خمّن صاحب هذا الشعار السعودي",
+        "answer": "شركة البحر الأحمر الدولية",
+        "image": "assets/sa-logos/red-sea.jpg"
+      },
+      {
+        "question": "ما اسم الجهة السعودية صاحبة هذا الشعار؟",
+        "answer": "البنك الأهلي السعودي",
+        "image": "assets/sa-logos/snb.jpg"
+      },
+      {
+        "question": "حدّد الجهة السعودية من شعارها",
+        "answer": "الشركة السعودية للكهرباء",
+        "image": "assets/sa-logos/sec.jpg"
+      },
+      {
+        "question": "لأي جهة سعودية هذا الشعار؟",
+        "answer": "بنك الإنماء",
+        "image": "assets/sa-logos/alinma.jpg"
+      },
+      {
+        "question": "أي جهة سعودية يرمز لها هذا الشعار؟",
+        "answer": "سبكيم",
+        "image": "assets/sa-logos/sipchem.jpg"
+      },
+      {
+        "question": "تعرّف على هذا الشعار السعودي",
+        "answer": "موبايلي",
+        "image": "assets/sa-logos/mobily.jpg"
+      },
+      {
+        "question": "هذا الشعار السعودي لمن؟",
+        "answer": "وزارة المالية",
+        "image": "assets/sa-logos/mof.jpg"
+      }
+    ],
+    "hard": [
+      {
+        "question": "احزر الجهة السعودية من هذا الشعار",
+        "answer": "بنك الرياض",
+        "image": "assets/sa-logos/riyad-bank.jpg"
+      },
+      {
+        "question": "ما الجهة السعودية التي تستخدم هذا الشعار؟",
+        "answer": "تابي",
+        "image": "assets/sa-logos/tabby.jpg"
+      },
+      {
+        "question": "هذا الشعار السعودي يخصّ أي جهة؟",
+        "answer": "روشن",
+        "image": "assets/sa-logos/roshn.jpg"
+      },
+      {
+        "question": "من صاحب هذا الشعار السعودي؟",
+        "answer": "معادن",
+        "image": "assets/sa-logos/maaden.jpg"
+      },
+      {
+        "question": "أي جهة سعودية تستعمل هذا الشعار؟",
+        "answer": "وزارة الخارجية",
+        "image": "assets/sa-logos/mofa.jpg"
+      },
+      {
+        "question": "لأي جهة سعودية يعود هذا الشعار؟",
+        "answer": "وزارة الرياضة",
+        "image": "assets/sa-logos/mos.jpg"
+      },
+      {
+        "question": "تعرف صاحب هذا الشعار السعودي؟",
+        "answer": "وزارة السياحة",
+        "image": "assets/sa-logos/mot.jpg"
+      }
+    ]
+  }
+}

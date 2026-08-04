@@ -15,7 +15,7 @@
 */
 
 // ارفع الرقم عند تغيير قائمة `SHELL` — `activate` يمسح ما سواه فيُعاد التخزين نظيفاً
-const CACHE = 'raja-v4';
+const CACHE = 'raja-v5';
 
 // هيكل التطبيق: ما يكفي لفتح اللعبة والوضع المحلي بلا شبكة
 const SHELL = [
@@ -49,6 +49,7 @@ const SHELL = [
   './data/questions-part11.json',
   './data/questions-part12.json',
   './data/questions-part13.json',
+  './data/questions-part14.json',
   './data/retired-questions.json',
   './data/retired-categories.json',
 
@@ -86,7 +87,30 @@ const SHELL = [
   './assets/logos/paypal.jpg',
   './assets/logos/lacoste.jpg',
   './assets/logos/nestle.jpg',
-  './assets/logos/nvidia.jpg'
+  './assets/logos/nvidia.jpg',
+
+  // شعارات سعودية بالصور — الفئة صارت صوراً بحتة، فبدونها تنكسر بلا إنترنت
+  './assets/sa-logos/aramco.jpg',
+  './assets/sa-logos/alrajhi.jpg',
+  './assets/sa-logos/saudi-riyal.jpg',
+  './assets/sa-logos/almarai.jpg',
+  './assets/sa-logos/jarir.jpg',
+  './assets/sa-logos/moe.jpg',
+  './assets/sa-logos/moh.jpg',
+  './assets/sa-logos/red-sea.jpg',
+  './assets/sa-logos/snb.jpg',
+  './assets/sa-logos/sec.jpg',
+  './assets/sa-logos/alinma.jpg',
+  './assets/sa-logos/sipchem.jpg',
+  './assets/sa-logos/mobily.jpg',
+  './assets/sa-logos/mof.jpg',
+  './assets/sa-logos/riyad-bank.jpg',
+  './assets/sa-logos/tabby.jpg',
+  './assets/sa-logos/roshn.jpg',
+  './assets/sa-logos/maaden.jpg',
+  './assets/sa-logos/mofa.jpg',
+  './assets/sa-logos/mos.jpg',
+  './assets/sa-logos/mot.jpg'
 ];
 
 self.addEventListener('install', (event) => {
