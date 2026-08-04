@@ -105,12 +105,28 @@ async function joinRoom(roomCode, playerName) {
 
   try {
     // نبحث بالكود فقط بدون تقييد الحالة، حتى يستطيع من انقطع اتصاله أو حدّث
-    // الصفحة أن يعود إلى روم بدأت اللعب فيها بالفعل
-    const { data: roomData, error: roomError } = await supa
-      .from('game_rooms')
-      .select('*')
-      .eq('code', roomCode.toUpperCase())
-      .single();
+    // الصفحة أن يعود إلى روم بدأت اللعب فيها بالفعل.
+    //
+    // ⚠️ **عبر دالة لا باستعلام مباشر**: قراءة `game_rooms` صارت مقصورة على
+    // أعضاء الروم، والداخل ليس عضواً بعد — فهي حلقة مفرغة. و`find_room_by_code`
+    // تُرجع **روماً واحدة بكودها** فمن معه الكود يدخل، ولا يستطيع أحد تعداد
+    // الرومات كما كان يستطيع حين كانت القراءة مفتوحة للجميع.
+    const { data: found, error: roomError } = await supa
+      .rpc('find_room_by_code', { p_code: roomCode.toUpperCase() });
+
+    // الدالة تُرجع أعمدة out_* (plpgsql ترفض تسمية عمود إخراج باسم عمود
+    // جدول تقرأه — راجع الملاحظة 13)، فنُعيدها لأسمائها التي يعرفها الكود
+    const row = Array.isArray(found) ? found[0] : found;
+    const roomData = row && {
+      id: row.out_id,
+      code: row.out_code,
+      name: row.out_name,
+      mode: row.out_mode,
+      status: row.out_status,
+      host_player_id: row.out_host_player_id,
+      categories_selected: row.out_categories_selected,
+      created_at: row.out_created_at
+    };
 
     if (roomError || !roomData) {
       uiAlert('❌ الروم غير موجود');
@@ -455,24 +471,45 @@ async function transferHostTo(nextPlayerId) {
   if (!currentRoom || !nextPlayerId) return false;
 
   try {
-    const { error } = await supa
-      .from('room_players')
-      .update({ is_host: true })
-      .eq('room_id', currentRoom.id)
-      .eq('player_id', nextPlayerId);
+    // ⚠️ **دالة لا تحديثان**: النقل يمسّ صفّ لاعب آخر، وسياسة `room_players`
+    // صارت «عدّل صفّك وحدك». والدالة تفحص أن المنادي مضيف فعلاً، وتنزع الصفة
+    // عن الجميع قبل إعطائها — وتُحدّث `game_rooms.host_player_id` في نفس
+    // المعاملة. كان الجدولان يُحدَّثان بنداءين منفصلين قد ينجح أحدهما ويفشل
+    // الآخر فتتناقض القاعدة مع نفسها.
+    const { error } = await supa.rpc('transfer_room_host', {
+      p_room_id: currentRoom.id,
+      p_next_player_id: nextPlayerId
+    });
 
     if (error) throw error;
-
-    // نُحدّث الروم أيضاً: `host_player_id` هو ما يُقرأ عند استعادة الجلسة
-    await supa
-      .from('game_rooms')
-      .update({ host_player_id: nextPlayerId })
-      .eq('id', currentRoom.id);
 
     log('👑 نُقلت الاستضافة للاعب التالي', 'success');
     return true;
   } catch (error) {
     console.error('Transfer host error:', error);
+    return false;
+  }
+}
+
+/*
+  شبكة الأمان: الروم بلا مضيف حاضر، فأقدم لاعب حاضر يطالب بها.
+
+  ⚠️ **لا تُنفَّذ بتحديث `is_host` في صفّك**: لو سُمح بذلك لصار أي عضو
+  ينصّب نفسه مضيفاً متى شاء — تصعيد صلاحية داخل الروم. الشرطان («لا مضيف
+  حاضراً» و«أنت الأقدم») يُفحصان في قاعدة البيانات حيث لا يُلتَفّ عليهما،
+  ونزع الصفة عن الغائب يجري في نفس المعاملة فلا يبقى مضيفان يتنازعان.
+*/
+async function claimRoomHost() {
+  if (!currentRoom) return false;
+
+  try {
+    const { data, error } = await supa.rpc('claim_room_host', {
+      p_room_id: currentRoom.id
+    });
+    if (error) throw error;
+    return data === true;
+  } catch (error) {
+    console.error('Claim host error:', error);
     return false;
   }
 }
@@ -510,10 +547,16 @@ async function leaveRoom() {
     // قبل الخروج: نسلّم الاستضافة إن كنّا المضيف
     await passHostBeforeLeaving();
 
-    // تحديث حالة اللاعب
+    // تحديث حالة اللاعب.
+    //
+    // ⚠️ **بلا `is_host: false`**: الكتابة في هذا العمود ممنوعة على اللاعب
+    // (صلاحيات الأعمدة في supabase-rooms-security-2.sql)، وإدراجها هنا كان
+    // سيجعل كل خروج يفشل. ولا حاجة إليها: التسليم أعلاه ينزع الصفة، ولو
+    // خرج آخر لاعب وبقيت `true` في صفّ حالته `left` فلا أثر لها —
+    // `is_room_host` و`claim_room_host` كلتاهما تشترطان `status = 'active'`.
     await supa
       .from('room_players')
-      .update({ status: 'left', left_at: new Date().toISOString(), is_host: false })
+      .update({ status: 'left', left_at: new Date().toISOString() })
       .eq('room_id', currentRoom.id)
       .eq('player_id', currentPlayer.player_id);
 
@@ -571,11 +614,13 @@ async function assignPlayerToTeam(playerId, team) {
   }
 
   try {
-    const { error } = await supa
-      .from('room_players')
-      .update({ team: team })
-      .eq('room_id', currentRoom.id)
-      .eq('player_id', playerId);
+    // فحص المضيف أعلاه للواجهة وحدها — والحقيقي في الدالة نفسها، فمن
+    // يستدعيها من الكونسول بلا صفة مضيف يُرفض
+    const { error } = await supa.rpc('set_player_team', {
+      p_room_id: currentRoom.id,
+      p_player_id: playerId,
+      p_team: team
+    });
 
     if (error) throw error;
     log(`✅ تم توزيع اللاعب على الفريق ${team}`, 'success');
@@ -602,11 +647,10 @@ async function kickPlayer(playerId, playerName) {
   if (!await uiConfirm(`طرد ${playerName || 'هذا اللاعب'} من الروم؟`)) return false;
 
   try {
-    const { error } = await supa
-      .from('room_players')
-      .update({ status: 'kicked', left_at: new Date().toISOString() })
-      .eq('room_id', currentRoom.id)
-      .eq('player_id', playerId);
+    const { error } = await supa.rpc('kick_room_player', {
+      p_room_id: currentRoom.id,
+      p_player_id: playerId
+    });
 
     if (error) throw error;
 
@@ -663,12 +707,15 @@ async function updatePlayerScore(team, points) {
   if (!currentRoom) return false;
 
   try {
-    // تحديث النقاط في room_players
-    await supa
-      .from('room_players')
-      .update({ score: points })
-      .eq('room_id', currentRoom.id)
-      .eq('team', team);
+    // تحديث النقاط في room_players.
+    // ⚠️ **لأي عضو لا للمضيف وحده — مقصود**: من يجيب قد يكون غير مضيف
+    // (البند 13)، فاشتراط الاستضافة هنا يكسر احتساب النقاط عنده.
+    // الدالة تشترط العضوية فقط، وهو الحدّ الذي يمنع **الغريب** لا زميلك.
+    await supa.rpc('set_team_score', {
+      p_room_id: currentRoom.id,
+      p_team: team,
+      p_score: points
+    });
 
     // تحديث حالة اللعبة
     const currentScores = roomGameState?.scores || { A: 0, B: 0 };
@@ -794,10 +841,12 @@ async function syncMyHostStatus() {
   if (!mine.is_host && !liveHost) {
     const heir = roomPlayers.find(isPlayerPresent);
     if (heir?.player_id === currentPlayer.player_id) {
-      if (await transferHostTo(currentPlayer.player_id)) {
+      // ⚠️ المطالبة لا النقل: `transfer_room_host` تشترط أن يكون المنادي
+      // مضيفاً، وهنا هو ليس مضيفاً بعد — وهذا بالضبط سبب المطالبة.
+      // و`claim_room_host` تنزع الصفة عن المضيف الغائب في نفس المعاملة،
+      // فلم تعد هناك حاجة لنداء `demoteAbsentHosts` منفصل بعدها.
+      if (await claimRoomHost()) {
         currentPlayer.is_host = true;
-        // المضيف الغائب قد يعود، فلا بدّ من نزع الصفة عنه صراحةً
-        await demoteAbsentHosts();
         announceHostPromotion();
       }
       return;
@@ -813,24 +862,14 @@ async function syncMyHostStatus() {
 }
 
 /*
-  المضيف الغائب الذي استُلمت منه الروم قد يعود بعد انقطاع طويل. لو بقيت
-  `is_host = true` في صفّه لصار في الروم مضيفان يتنازعان التحكّم، ولأعاد
-  `syncMyHostStatus` عنده رفع صفته محلياً. فننزعها صراحةً عمّن سواي.
-*/
-async function demoteAbsentHosts() {
-  if (!currentRoom || !currentPlayer) return;
+  ⚠️ `demoteAbsentHosts` حُذفت — لا تُعِدها.
 
-  try {
-    await supa
-      .from('room_players')
-      .update({ is_host: false })
-      .eq('room_id', currentRoom.id)
-      .eq('is_host', true)
-      .neq('player_id', currentPlayer.player_id);
-  } catch (e) {
-    console.warn('تعذّر نزع الاستضافة عن الغائب:', e);
-  }
-}
+  كانت تنزع `is_host` عمّن سوايَ بتحديث مباشر على صفوف الآخرين، وهذا صار
+  ممنوعاً (وهو بعينه ما كان يسمح لأي أحد بعزل مضيف أي روم). نزعُ الصفة عن
+  المضيف الغائب صار داخل `claim_room_host()` في نفس معاملة المطالبة —
+  وهذا أمتن: كان النداءان منفصلين فقد ينجح أحدهما ويفشل الآخر، فتبقى الروم
+  بمضيفَين أو بلا مضيف.
+*/
 
 function announceHostPromotion() {
   uiAlert('👑 صرت صاحب الروم — تقدر توزّع الفرق وتتحكّم باللعبة');
